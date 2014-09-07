@@ -32,13 +32,13 @@ import java.io.Serializable;
  * is serializable.
  * 
  * @author Daniel Kinnamon
- * @version 2014-09-01
+ * @version 2014-09-07
  * @since 2014-09-01
  */
-public class SNP implements Serializable {
+public final class SNP implements Serializable {
 
   /** Allele orientation values for a SNP */
-  public enum AlleleOrientation {
+  public static enum AlleleOrientation {
     FORWARD, REVERSE
   }
 
@@ -49,43 +49,46 @@ public class SNP implements Serializable {
    * revision number by that author on that date. Most of the time, this
    * revision number should be 1.
    */
-  private static final long serialVersionUID = 201409010404111L;
-  /** @serial String dbSNP refSNP identifier (i.e., rs number). */
-  private String rsID;
-  /** @serial String source publication reference. */
-  private String sourcePub;
-  /** @serial String allele 1 from source publication. */
-  private String allele1;
-  /** @serial String allele 2 from source publication. */
-  private String allele2;
+  private static final long serialVersionUID = 201409070404111L;
+  /** @serial {@code String} dbSNP refSNP identifier (i.e., rs number). */
+  private final String rsID;
+  /** @serial {@code String} source publication reference. */
+  private final String sourcePub;
+  /** @serial {@code String} allele 1 from source publication. */
+  private final String allele1;
+  /** @serial {@code String} allele 2 from source publication. */
+  private final String allele2;
   /**
-   * @serial AlleleOrientation orientation of source publication alleles
+   * @serial {@code AlleleOrientation} orientation of source publication alleles
    *         relative to refSNP alleles.
    */
-  private AlleleOrientation orientRs;
-  /** @serial double allele 2 frequency from source publication. */
-  private double allele2Freq;
+  private final AlleleOrientation orientRs;
+  /** @serial {@code double} allele 2 frequency from source publication. */
+  private final double allele2Freq;
   /**
-   * @serial double Cox proportional hazards model ln hazard ratio for each
-   *         additional allele 2 obtained from the source publication.
+   * @serial {@code double} Cox proportional hazards model ln hazard ratio for
+   *         each additional allele 2 obtained from the source publication.
    */
-  private double allele2LnHR;
+  private final double allele2LnHR;
 
   /**
    * Constructs a SNP object.
    * 
-   * @param rsID String dbSNP refSNP identifier (i.e., rs number)
-   * @param sourcePub String source publication reference
-   * @param allele1 String allele 1 from source publication
-   * @param allele2 String allele 2 from source publication
-   * @param orientRs AlleleOrientation orientation of source publication alleles
-   *          relative to refSNP alleles
-   * @param allele2Freq double allele 2 frequency from source publication
-   * @param allele2LnHR double Cox proportional hazards model ln hazard ratio
-   *          for each additional allele 2 obtained from the source publication
+   * @param rsID {@code String} dbSNP refSNP identifier (i.e., rs number)
+   * @param sourcePub {@code String} source publication reference
+   * @param allele1 {@code String} allele 1 from source publication
+   * @param allele2 {@code String} allele 2 from source publication
+   * @param orientRs {@code AlleleOrientation} orientation of source publication
+   *          alleles relative to refSNP alleles
+   * @param allele2Freq {@code double} allele 2 frequency from source
+   *          publication
+   * @param allele2LnHR {@code double} Cox proportional hazards model ln hazard
+   *          ratio for each additional allele 2 obtained from the source
+   *          publication
    */
-  public SNP(String rsID, String sourcePub, String allele1, String allele2,
-    AlleleOrientation orientRs, double allele2Freq, double allele2LnHR) {
+  public SNP(final String rsID, final String sourcePub, final String allele1,
+    final String allele2, final AlleleOrientation orientRs,
+    final double allele2Freq, final double allele2LnHR) {
     this.rsID = rsID;
     this.sourcePub = sourcePub;
     this.allele1 = allele1;
@@ -95,49 +98,49 @@ public class SNP implements Serializable {
     this.allele2LnHR = allele2LnHR;
   }
 
-  /** Returns String dbSNP refSNP identifier (i.e., rs number). */
-  public String getRsID() {
+  /** Returns {@code String} dbSNP refSNP identifier (i.e., rs number). */
+  public final String getRsID() {
     return rsID;
   }
 
-  /** Returns String source publication reference. */
-  public String getSourcePub() {
+  /** Returns {@code String} source publication reference. */
+  public final String getSourcePub() {
     return sourcePub;
   }
 
-  /** Returns String allele 1 from source publication. */
-  public String getAllele1() {
+  /** Returns {@code String} allele 1 from source publication. */
+  public final String getAllele1() {
     return allele1;
   }
 
-  /** Returns String allele 2 from source publication. */
-  public String getAllele2() {
+  /** Returns {@code String} allele 2 from source publication. */
+  public final String getAllele2() {
     return allele2;
   }
 
   /**
-   * Returns AlleleOrientation orientation of source publication alleles
+   * Returns {@code AlleleOrientation} orientation of source publication alleles
    * relative to refSNP alleles.
    */
-  public AlleleOrientation getOrientRs() {
+  public final AlleleOrientation getOrientRs() {
     return orientRs;
   }
 
-  /** Returns double allele 2 frequency from source publication. */
-  public double getAllele2Freq() {
+  /** Returns {@code double} allele 2 frequency from source publication. */
+  public final double getAllele2Freq() {
     return allele2Freq;
   }
 
   /**
-   * Returns double Cox proportional hazards model ln hazard ratio for each
-   * additional allele 2 obtained from the source publication.
+   * Returns {@code double} Cox proportional hazards model ln hazard ratio for
+   * each additional allele 2 obtained from the source publication.
    */
-  public double getAllele2LnHR() {
+  public final double getAllele2LnHR() {
     return allele2LnHR;
   }
 
   @Override
-  public String toString() {
+  public final String toString() {
     return rsID + "\t" + sourcePub + "\t" + allele1 + "/" + allele2 + "\t" +
       orientRs + "\t" + allele2Freq + "\t" + allele2LnHR;
   }

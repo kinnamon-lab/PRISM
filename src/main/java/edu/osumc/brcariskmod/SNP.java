@@ -20,6 +20,9 @@ package edu.osumc.brcariskmod;
 
 import java.io.Serializable;
 
+import org.apache.commons.math3.random.RandomGenerator;
+import org.apache.commons.math3.util.FastMath;
+
 /**
  * Single nucleotide polymorphism (SNP) characteristics.
  * <p>
@@ -32,7 +35,7 @@ import java.io.Serializable;
  * is serializable.
  * 
  * @author Daniel Kinnamon
- * @version 2014-09-07
+ * @version 2014-09-23
  * @since 2014-09-01
  */
 public final class SNP implements Serializable {
@@ -43,13 +46,12 @@ public final class SNP implements Serializable {
   }
 
   /**
-   * The SUID is given by the class modification date in YYYYMMDD format,
-   * followed by committing author initials as 2-digit alphabet numbers in
-   * FFMMLL format (e.g., initials DDK are 040411), followed by the 1-digit
-   * revision number by that author on that date. Most of the time, this
-   * revision number should be 1.
+   * The {@code serialVersionUID} should be incremented by 1 every time an
+   * incompatible change (for serialization) is made to the class. If all
+   * changes are compatible, then the {@code serialVersionUID} should not be
+   * changed.
    */
-  private static final long serialVersionUID = 201409070404111L;
+  private static final long serialVersionUID = 1L;
   /** @serial {@code String} dbSNP refSNP identifier (i.e., rs number). */
   private final String rsID;
   /** @serial {@code String} source publication reference. */
@@ -137,6 +139,51 @@ public final class SNP implements Serializable {
    */
   public final double getAllele2LnHR() {
     return allele2LnHR;
+  }
+
+  /**
+   * Returns {@code double} ln probability of a given SNP genotype under the
+   * assumption of HWE.
+   * 
+   * @param allele2Num Genotype, as {@code int} number of 2 alleles
+   */
+  public final double getLnProbGeno(final int allele2Num) {
+    // @formatter:off
+    /*
+     * ln(p_2) = ln(allele2Freq^2) = 2*ln(allele2Freq) 
+     * ln(p_1) = ln(2*allele2Freq*(1-allele2Freq)) 
+     *         = ln(2) + ln(allele2Freq) + ln(1-allele2Freq)
+     * ln(p_0) = ln((1-allele2Freq)^2) = 2*ln(1-allele2Freq)
+     */
+    // @formatter:on
+    return ((allele2Num == 1) ? FastMath.log(2) : 0.0D) + allele2Num *
+      FastMath.log(allele2Freq) + (2 - allele2Num) *
+      FastMath.log(1 - allele2Freq);
+  }
+
+  /**
+   * Returns {@code int} random SNP genotype, as the number of 2 alleles, under
+   * the assumption of HWE using a user-supplied random number generator.
+   * <p>
+   * The implementation uses the fact that, under HWE, the SNP genotype (number
+   * of 2 alleles) is distributed Binomial(2, {@code allele2Freq}), which is
+   * also the distribution of the number of successes in two independent
+   * Bernoulli trials each with success probability {@code allele2Freq}.
+   * 
+   * @param rng {@code RandomGenerator} object that provides the underlying
+   *          pseudorandom number stream
+   */
+  public final int getRandGeno(final RandomGenerator rng) {
+    /*
+     * The nextDouble() RandomGenerator method produces an independent random
+     * double drawn from U(0,1), so the expression ((rng.nextDouble() <
+     * allele2Freq) ? 1 : 0) takes the value 1 with probability allele2Freq and
+     * 0 with probability 1 - allele2Freq. The sum of two of these expressions
+     * is therefore the number of successes in two independent Bernoulli trials
+     * each with success probability allele2Freq.
+     */
+    return ((rng.nextDouble() < allele2Freq) ? 1 : 0) +
+      ((rng.nextDouble() < allele2Freq) ? 1 : 0);
   }
 
   @Override

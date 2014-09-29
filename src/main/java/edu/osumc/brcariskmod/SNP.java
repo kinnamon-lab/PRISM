@@ -19,7 +19,9 @@
 package edu.osumc.brcariskmod;
 
 import java.io.Serializable;
+import java.util.Locale;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.math3.random.RandomGenerator;
 import org.apache.commons.math3.util.FastMath;
 
@@ -35,7 +37,8 @@ import org.apache.commons.math3.util.FastMath;
  * is serializable.
  * 
  * @author Daniel Kinnamon
- * @version 2014-09-23
+ * @author Chuhan Zhang
+ * @version 2014-09-29
  * @since 2014-09-01
  */
 public final class SNP implements Serializable {
@@ -56,9 +59,9 @@ public final class SNP implements Serializable {
   private final String rsID;
   /** @serial {@code String} source publication reference. */
   private final String sourcePub;
-  /** @serial {@code String} allele 1 from source publication. */
+  /** @serial {@code String} uppercase allele 1 from source publication. */
   private final String allele1;
-  /** @serial {@code String} allele 2 from source publication. */
+  /** @serial {@code String} uppercase allele 2 from source publication. */
   private final String allele2;
   /**
    * @serial {@code AlleleOrientation} orientation of source publication alleles
@@ -93,8 +96,8 @@ public final class SNP implements Serializable {
     final double allele2Freq, final double allele2LnHR) {
     this.rsID = rsID;
     this.sourcePub = sourcePub;
-    this.allele1 = allele1;
-    this.allele2 = allele2;
+    this.allele1 = allele1.toUpperCase(Locale.ENGLISH);
+    this.allele2 = allele2.toUpperCase(Locale.ENGLISH);
     this.orientRs = orientRs;
     this.allele2Freq = allele2Freq;
     this.allele2LnHR = allele2LnHR;
@@ -186,9 +189,106 @@ public final class SNP implements Serializable {
       ((rng.nextDouble() < allele2Freq) ? 1 : 0);
   }
 
+  /**
+   * Returns the {@code double} # of times the SNP object {@code allele2}
+   * appears in the input genotype given by {@code inAllele1/inAllele2}, times
+   * the SNP object per-allele2 ln hazard ratio. If the input genotype is two
+   * missing ("0") alleles, then the expected value over all possible genotypes
+   * at this SNP is returned.
+   * 
+   * @param inAllele1 {@code String} input allele1
+   * @param inAllele2 {@code String} input allele2
+   * @param inOrientRs {@code AlleleOrientation} orientation of input alleles
+   *          relative to refSNP alleles.
+   * 
+   * @return {@code double} genotype score
+   */
+  public final double genoScore(final String inAllele1, final String inAllele2,
+    final AlleleOrientation inOrientRs) {
+    /*
+     * Stored alleles in SNP object are in English locale uppercase (ensured by
+     * constructor). Must convert input alleles to uppercase using English
+     * locale for proper matching.
+     */
+    String upperInAllele1 = inAllele1.toUpperCase(Locale.ENGLISH);
+    String upperInAllele2 = inAllele2.toUpperCase(Locale.ENGLISH);
+    // Regular expression describing form of all valid allele values.
+    String validAlleleRegex = "^-$|^0$|^[ACGT]+$";
+    // Check that uppercase input alleles match this regex.
+    if (!(upperInAllele1.matches(validAlleleRegex) && upperInAllele2
+      .matches(validAlleleRegex))) {
+      throw new IllegalArgumentException("SNP.genoScore: There is an " +
+        "invalid input allele for SNP " + rsID + ". Valid input alleles " +
+        "can be '-', '0', or any string containing only the characters " +
+        "'A', 'C', 'G', and 'T'.");
+    }
+    // Check that either both uppercase input alleles are "0" or neither is "0".
+    if (upperInAllele1.equals("0") ^ upperInAllele2.equals("0")) {
+      throw new IllegalArgumentException("SNP.genoScore: Neither or both " +
+        "of the two input alleles should be '0' for SNP " + rsID + ".");
+    }
+    // Double to hold result.
+    double result;
+    if (upperInAllele1.equals("0") && upperInAllele2.equals("0")) {
+      /*
+       * If both uppercase input alleles are "0", the input genotype is missing,
+       * so the result is the expected X_j*Beta_j over all possible genotypes at
+       * this SNP.
+       */
+      result =
+        allele2LnHR * FastMath.exp(getLnProbGeno(1)) + 2 * allele2LnHR *
+          FastMath.exp(getLnProbGeno(2));
+    } else {
+      /*
+       * Otherwise, process uppercase input alleles into appropriate
+       * orientation.
+       */
+      String orientedInAllele1;
+      String orientedInAllele2;
+      // Use != for safer enum comparison.
+      if (inOrientRs != orientRs) {
+        /*
+         * If the uppercase input alleles are in the opposite orientation to the
+         * SNP alleles, translate A -> T, C -> G, G -> C, and T -> A in each
+         * uppercase input allele string.
+         */
+        orientedInAllele1 =
+          StringUtils.replaceChars(upperInAllele1, "ACGT", "TGCA");
+        orientedInAllele2 =
+          StringUtils.replaceChars(upperInAllele2, "ACGT", "TGCA");
+      } else {
+        // Otherwise, copy uppercase input alleles.
+        orientedInAllele1 = upperInAllele1;
+        orientedInAllele2 = upperInAllele2;
+      }
+      /*
+       * Create regex reflecting possible SNP alleles and check that oriented
+       * uppercase input allele strings both match this regex.
+       */
+      String possibleAllelesRegex = "^" + allele1 + "$|^" + allele2 + "$";
+      if (!(orientedInAllele1.matches(possibleAllelesRegex) && orientedInAllele2
+        .matches(possibleAllelesRegex))) {
+        throw new IllegalArgumentException("One or both input alleles " +
+          "differ from the possible population alleles for SNP " + rsID + ".");
+      }
+      /*
+       * Obtain the number of times allele2 appears in the oriented uppercase
+       * input alleles by counting the number of occurrences of the allele2
+       * substring in the concatenation of the uppercase input allele strings.
+       * The result is this number times the per-allele2 ln hazard ratio.
+       */
+      result =
+        StringUtils
+          .countMatches(orientedInAllele1 + orientedInAllele2, allele2) *
+          allele2LnHR;
+    }
+    return result;
+  }
+
   @Override
   public final String toString() {
     return rsID + "\t" + sourcePub + "\t" + allele1 + "/" + allele2 + "\t" +
       orientRs + "\t" + allele2Freq + "\t" + allele2LnHR;
   }
+
 }

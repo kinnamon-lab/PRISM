@@ -33,29 +33,29 @@ import org.junit.runners.Parameterized.Parameters;
  * JUnit test class for {@code SNP} class.
  * 
  * @author Daniel Kinnamon
- * @version 2014-10-03
+ * @version 2014-10-05
  * @since 2014-10-03
  */
 @RunWith(Enclosed.class)
-public class SNPTest {
+public final class SNPTest {
 
   /** Parameterized inner test class for {@code SNP.genoScore} method. */
   @RunWith(Parameterized.class)
-  public static class GenoScoreTest {
+  public static final class GenoScoreTest {
 
     /**
      * Produces a collection of {@code Object} arrays containing parameters
      * defining each test case.
      */
     @Parameters(name = "GenoScoreTest: Case {index}")
-    public static Collection<Object[]> cases() {
+    public static final Collection<Object[]> cases() {
       // Declare ArrayList to hold test cases.
-      ArrayList<Object[]> casesList = new ArrayList<Object[]>();
+      final ArrayList<Object[]> casesList = new ArrayList<Object[]>();
       // Create two test case SNP objects.
-      SNP testSNP1 =
+      final SNP testSNP1 =
         new SNP("rs1", "Foo et al. Title. AJHG 2012; 21(3):1-5", "A", "g",
           SNP.AlleleOrientation.FORWARD, 0.2D, 0.5D);
-      SNP testSNP2 =
+      final SNP testSNP2 =
         new SNP("rs2", "Foo et al. Title. AJHG 2012; 21(3):1-5", "AtTacGcG",
           "-", SNP.AlleleOrientation.REVERSE, 0.5D, 0.25D);
       // IllegalArgumentException: Bad input allele.
@@ -161,7 +161,7 @@ public class SNPTest {
      * test case.
      */
     @Test
-    public void test() {
+    public final void test() {
       // Use try-catch block for exception checking.
       try {
         double actualScore =

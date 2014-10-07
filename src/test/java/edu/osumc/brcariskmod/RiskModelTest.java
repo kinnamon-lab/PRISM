@@ -40,7 +40,7 @@ import org.junit.runners.Parameterized.Parameters;
  * JUnit test class for {@code RiskModel} class.
  * 
  * @author Daniel Kinnamon
- * @version 2014-10-05
+ * @version 2014-10-07
  * @since 2014-10-05
  */
 @RunWith(Enclosed.class)
@@ -135,16 +135,10 @@ public final class RiskModelTest {
      */
     @Parameter(3)
     public boolean testExactGenoDist;
-    /**
-     * {@code Class<Exception>} expected exception type (should be {@code null}
-     * if no exception expected).
-     */
+    /** {@code Class<Exception>} expected exception type. */
     @Parameter(4)
     public Class<Exception> exceptType;
-    /**
-     * {@code String} expected exception message substring (should be
-     * {@code null} if no exception expected).
-     */
+    /** {@code String} expected exception message substring. */
     @Parameter(5)
     public String exceptMessageSubstr;
 
@@ -250,7 +244,7 @@ public final class RiskModelTest {
         // Number of multivariant genotypes to be enumerated.
         final int nGenos = ArithmeticUtils.pow(3, modelSNPs.length);
         // Marginal survivor function values, all initialized to 0.
-        double[] margSurv = new double[baseSurv.length];
+        final double[] margSurv = new double[baseSurv.length];
         Arrays.fill(margSurv, 0.0D);
         /*
          * Linear predictor and ln probability holders for current multivariant
@@ -373,7 +367,7 @@ public final class RiskModelTest {
        * Run test of baseline survivor function solving in RiskModel
        * constructor.
        */
-      RiskModel testRiskModel =
+      final RiskModel testRiskModel =
         new RiskModel(testSNPs, testTimes, testMargSurv, testExactGenoDist);
       /*
        * Print original and solved baseline survivor function values as well as

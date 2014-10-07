@@ -33,11 +33,124 @@ import org.junit.runners.Parameterized.Parameters;
  * JUnit test class for {@code SNP} class.
  * 
  * @author Daniel Kinnamon
- * @version 2014-10-05
+ * @version 2014-10-07
  * @since 2014-10-03
  */
 @RunWith(Enclosed.class)
 public final class SNPTest {
+
+  /** Parameterized inner test class for {@code SNP} constructor arguments. */
+  @RunWith(Parameterized.class)
+  public static final class ConstructorArgTest {
+
+    /**
+     * Produces a collection of {@code Object} arrays containing parameters
+     * defining each test case.
+     */
+    @Parameters(name = "ConstructorArgTest: Case {index}")
+    public static final Collection<Object[]> cases() {
+      // Declare ArrayList to hold test cases.
+      final ArrayList<Object[]> casesList = new ArrayList<Object[]>();
+      // Declare variables containing valid constructor argument values.
+      final String goodRsID = "rs12345";
+      final String goodSourcePub = "Foo et al. Title. AJHG 2012; 21(3):1-5";
+      final String goodAllele1 = "A";
+      final String goodAllele2 = "g";
+      final double goodAllele2Freq = 0.2D;
+      final double goodAllele2LnHR = 0.5D;
+      // IllegalArgumentException: Bad rs ID.
+      casesList.add(new Object[] { "12345", goodSourcePub, goodAllele1,
+        goodAllele2, SNP.AlleleOrientation.FORWARD, goodAllele2Freq,
+        goodAllele2LnHR, IllegalArgumentException.class, "invalid rs ID" });
+      // IllegalArgumentException: Bad input allele.
+      casesList.add(new Object[] { goodRsID, goodSourcePub, goodAllele1, "0",
+        SNP.AlleleOrientation.FORWARD, goodAllele2Freq, goodAllele2LnHR,
+        IllegalArgumentException.class, "invalid input allele" });
+      // IllegalArgumentException: Bad input allele.
+      casesList.add(new Object[] { goodRsID, goodSourcePub, "Q", goodAllele2,
+        SNP.AlleleOrientation.FORWARD, goodAllele2Freq, goodAllele2LnHR,
+        IllegalArgumentException.class, "invalid input allele" });
+      // IllegalArgumentException: Bad allele 2 frequency.
+      casesList.add(new Object[] { goodRsID, goodSourcePub, goodAllele1,
+        goodAllele2, SNP.AlleleOrientation.FORWARD, 0.0D, goodAllele2LnHR,
+        IllegalArgumentException.class, "(0,1)" });
+      // IllegalArgumentException: Bad allele 2 frequency.
+      casesList.add(new Object[] { goodRsID, goodSourcePub, goodAllele1,
+        goodAllele2, SNP.AlleleOrientation.FORWARD, 1.0D, goodAllele2LnHR,
+        IllegalArgumentException.class, "(0,1)" });
+      // IllegalArgumentException: Bad allele 2 frequency.
+      casesList.add(new Object[] { goodRsID, goodSourcePub, goodAllele1,
+        goodAllele2, SNP.AlleleOrientation.FORWARD, -0.01D, goodAllele2LnHR,
+        IllegalArgumentException.class, "(0,1)" });
+      // IllegalArgumentException: Bad allele 2 frequency.
+      casesList.add(new Object[] { goodRsID, goodSourcePub, goodAllele1,
+        goodAllele2, SNP.AlleleOrientation.FORWARD, 1.01D, goodAllele2LnHR,
+        IllegalArgumentException.class, "(0,1)" });
+      return casesList;
+    }
+
+    /*
+     * Inject Object parameter array values into test class members for a
+     * particular case.
+     */
+    /** {@code String} test rs ID. */
+    @Parameter(0)
+    public String testRsID;
+    /** {@code String} test source publication. */
+    @Parameter(1)
+    public String testSourcePub;
+    /** {@code String} test allele 1. */
+    @Parameter(2)
+    public String testAllele1;
+    /** {@code String} test allele 2. */
+    @Parameter(3)
+    public String testAllele2;
+    /**
+     * {@code SNP.AlleleOrientation} test allele orientation, relative to RefSNP
+     * alleles.
+     */
+    @Parameter(4)
+    public SNP.AlleleOrientation testOrientRs;
+    /** {@code double} test allele 2 frequency. */
+    @Parameter(5)
+    public double testAllele2Freq;
+    /** {@code double} test per-allele 2 ln hazard ratio. */
+    @Parameter(6)
+    public double testAllele2LnHR;
+    /** {@code Class<Exception>} expected exception type. */
+    @Parameter(7)
+    public Class<Exception> exceptType;
+    /** {@code String} expected exception message substring. */
+    @Parameter(8)
+    public String exceptMessageSubstr;
+
+    /**
+     * Runs test on {@code ConstructorArgTest} object instantiated for a
+     * particular test case.
+     */
+    @Test
+    public final void test() {
+      // Use try-catch block for exception checking.
+      try {
+        new SNP(testRsID, testSourcePub, testAllele1, testAllele2,
+          testOrientRs, testAllele2Freq, testAllele2LnHR);
+        /*
+         * Code in the try block below this comment should not be executed
+         * because all test cases result in exceptions.
+         */
+        Assert.fail("Expected exception to be thrown.");
+      } catch (Exception e) {
+        // Check for expected exception.
+        Assert.assertTrue("Expected " + exceptType.getSimpleName() + " to be " +
+          "thrown.", e.getClass() == exceptType);
+        Assert.assertTrue("Expected exception message to contain substring '" +
+          exceptMessageSubstr + "'.",
+          e.getMessage().contains(exceptMessageSubstr));
+      }
+
+    }
+
+  }
 
   /** Parameterized inner test class for {@code SNP.genoScore} method. */
   @RunWith(Parameterized.class)
@@ -164,7 +277,7 @@ public final class SNPTest {
     public final void test() {
       // Use try-catch block for exception checking.
       try {
-        double actualScore =
+        final double actualScore =
           testSNP.genoScore(testAllele1, testAllele2, testOrientRs);
         /*
          * If error-checking test case, code below this line should not be

@@ -38,7 +38,7 @@ import org.apache.commons.math3.util.FastMath;
  * 
  * @author Daniel Kinnamon
  * @author Chuhan Zhang
- * @version 2014-09-29
+ * @version 2014-10-07
  * @since 2014-09-01
  */
 public final class SNP implements Serializable {
@@ -95,11 +95,31 @@ public final class SNP implements Serializable {
     final String allele2, final AlleleOrientation orientRs,
     final double allele2Freq, final double allele2LnHR) {
     this.rsID = rsID;
+    // Check that stored rsID has valid form.
+    if (!this.rsID.matches("^rs[0-9]+$")) {
+      throw new IllegalArgumentException("SNP Constructor: " + this.rsID +
+        " is an invalid rs ID.");
+    }
     this.sourcePub = sourcePub;
     this.allele1 = allele1.toUpperCase(Locale.ENGLISH);
     this.allele2 = allele2.toUpperCase(Locale.ENGLISH);
+    // Regular expression describing form of all valid allele values.
+    final String validAlleleRegex = "^-$|^[ACGT]+$";
+    // Check that stored alleles match this regex.
+    if (!(this.allele1.matches(validAlleleRegex) && this.allele2
+      .matches(validAlleleRegex))) {
+      throw new IllegalArgumentException("SNP Constructor: There is an " +
+        "invalid input allele for SNP " + this.rsID + ". Valid input alleles " +
+        "can be '-' or any string containing only the characters " +
+        "'A', 'C', 'G', and 'T'.");
+    }
     this.orientRs = orientRs;
     this.allele2Freq = allele2Freq;
+    // Check that stored allele 2 frequency is in (0,1).
+    if (!((this.allele2Freq > 0.0D) && (this.allele2Freq < 1.0D))) {
+      throw new IllegalArgumentException("SNP Constructor: Allele 2 " +
+        "frequency for SNP " + this.rsID + " is not in (0,1).");
+    }
     this.allele2LnHR = allele2LnHR;
   }
 
@@ -210,10 +230,10 @@ public final class SNP implements Serializable {
      * constructor). Must convert input alleles to uppercase using English
      * locale for proper matching.
      */
-    String upperInAllele1 = inAllele1.toUpperCase(Locale.ENGLISH);
-    String upperInAllele2 = inAllele2.toUpperCase(Locale.ENGLISH);
+    final String upperInAllele1 = inAllele1.toUpperCase(Locale.ENGLISH);
+    final String upperInAllele2 = inAllele2.toUpperCase(Locale.ENGLISH);
     // Regular expression describing form of all valid allele values.
-    String validAlleleRegex = "^-$|^0$|^[ACGT]+$";
+    final String validAlleleRegex = "^-$|^0$|^[ACGT]+$";
     // Check that uppercase input alleles match this regex.
     if (!(upperInAllele1.matches(validAlleleRegex) && upperInAllele2
       .matches(validAlleleRegex))) {
@@ -265,7 +285,7 @@ public final class SNP implements Serializable {
        * Create regex reflecting possible SNP alleles and check that oriented
        * uppercase input allele strings both match this regex.
        */
-      String possibleAllelesRegex = "^" + allele1 + "$|^" + allele2 + "$";
+      final String possibleAllelesRegex = "^" + allele1 + "$|^" + allele2 + "$";
       if (!(orientedInAllele1.matches(possibleAllelesRegex) && orientedInAllele2
         .matches(possibleAllelesRegex))) {
         throw new IllegalArgumentException("One or both input alleles " +

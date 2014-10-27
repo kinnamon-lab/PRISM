@@ -18,9 +18,13 @@
 
 package edu.osumc.brcariskmod;
 
+import java.io.PrintWriter;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Locale;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.math3.analysis.UnivariateFunction;
 import org.apache.commons.math3.analysis.solvers.RiddersSolver;
 import org.apache.commons.math3.random.MersenneTwister;
@@ -47,18 +51,19 @@ import org.apache.commons.math3.util.Precision;
  * then saved for later use.
  * 
  * @author Daniel Kinnamon
- * @version 2014-09-23
+ * @version 2014-10-27
  * @since 2014-09-23
  */
 public final class RiskModel implements Serializable {
 
   /**
-   * The {@code serialVersionUID} should be incremented by 1 every time an
-   * incompatible change (for serialization) is made to the class. If all
-   * changes are compatible, then the {@code serialVersionUID} should not be
-   * changed.
+   * The {@code serialVersionUID} should be automatically regenerated within the
+   * IDE whenever the fields of the class change. It should not be changed if
+   * only the methods change.
    */
-  private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 837026756986969984L;
+  /** @serial {@code String} risk model name. */
+  private final String modelName;
   /** @serial {@code SNP} array containing information on all model SNPs. */
   private final SNP[] modelSNPs;
   /**
@@ -97,9 +102,10 @@ public final class RiskModel implements Serializable {
    * @serial {@code boolean} indicator of whether calculations are based on the
    *         exact multivariant genotype distribution based on the allele
    *         frequencies in {@code modelSNPs} and the assumptions of HWE and
-   *         linkage equilbrium (TRUE) or a Monte Carlo sample from it (FALSE).
+   *         linkage equilbrium {@code (true)} or a Monte Carlo sample from it
+   *         {@code (false)}.
    */
-  private final boolean exactGenoDist;
+  private final boolean useExactGenoDist;
   /**
    * @serial {@code int} constant number of SNPs above which a Monte Carlo
    *         sample from the multivariant genotype distribution must be used.
@@ -137,14 +143,22 @@ public final class RiskModel implements Serializable {
   private static final int SOLVER_MAX_EVAL = 100;
 
   /**
-   * @serial {@code ObjFunException} is a private constant subclass of
-   *         {@code RuntimeException} that is used to throw unchecked local
-   *         exceptions from inside a {@link UnivariateFunction} that will not
-   *         be caught by Apache Commons Math.
+   * @serial {@code ObjFunException} is a private static nested class extending
+   *         {@code RuntimeException} that is used to throw local exceptions
+   *         from inside a {@link UnivariateFunction} so that they will not be
+   *         caught by Apache Commons Math.
    */
   private static final class ObjFunException extends RuntimeException {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 4577459979033121052L;
+
+    /**
+     * Constructs an ObjFunException object that packages the underlying
+     * exception.
+     */
+    public ObjFunException(final Throwable cause) {
+      super(cause);
+    }
   }
 
   /**
@@ -157,6 +171,7 @@ public final class RiskModel implements Serializable {
    * non-negative. The elements of the {@code margSurv} array must be
    * non-increasing with the index number and in [0, 1].
    * 
+   * @param modelName {@code String} risk model name
    * @param modelSNPs {@link SNP} array containing all SNPs to be included in
    *          the model
    * @param times {@code double} array containing the times at which marginal
@@ -164,10 +179,10 @@ public final class RiskModel implements Serializable {
    * @param margSurv {@code double} array in which {@code margSurv[i]} is the
    *          value of the marginal survivor function at {@code time[i]}
    */
-  public RiskModel(final SNP[] modelSNPs, final double[] times,
-    final double[] margSurv) {
-    this(modelSNPs, times, margSurv, (modelSNPs.length <= MAX_SNPS_EXACT)
-      ? true : false);
+  public RiskModel(final String modelName, final SNP[] modelSNPs,
+    final double[] times, final double[] margSurv) {
+    this(modelName, modelSNPs, times, margSurv,
+      (modelSNPs.length <= MAX_SNPS_EXACT) ? true : false);
   }
 
   /**
@@ -177,27 +192,30 @@ public final class RiskModel implements Serializable {
    * the index number and non-negative. The elements of the {@code margSurv}
    * array must be non-increasing with the index number and in [0, 1].
    * 
+   * @param modelName {@code String} risk model name
    * @param modelSNPs {@link SNP} array containing all SNPs to be included in
    *          the model
    * @param times {@code double} array containing the times at which marginal
    *          survivor function values are available
    * @param margSurv {@code double} array in which {@code margSurv[i]} is the
    *          value of the marginal survivor function at {@code time[i]}
-   * @param exactGenoDist {@code boolean} indicating whether the exact genotype
-   *          distribution (TRUE) or a Monte Carlo sample from it (FALSE) should
-   *          be used
+   * @param useExactGenoDist {@code boolean} indicating whether the exact
+   *          genotype distribution {@code (true)} or a Monte Carlo sample from
+   *          it {@code (false)} should be used.
    */
-  public RiskModel(final SNP[] modelSNPs, final double[] times,
-    final double[] margSurv, final boolean exactGenoDist) {
+  public RiskModel(final String modelName, final SNP[] modelSNPs,
+    final double[] times, final double[] margSurv,
+    final boolean useExactGenoDist) {
     // Copy constructor argument references to instance members.
+    this.modelName = modelName;
     this.modelSNPs = modelSNPs;
     this.times = times;
     this.margSurv = margSurv;
-    this.exactGenoDist = exactGenoDist;
+    this.useExactGenoDist = useExactGenoDist;
     // Check that arguments resulted in a properly constructed instance.
     checkConstructorArgs();
-    // Based on the value of exactGenoDist...
-    if (exactGenoDist) {
+    // Based on the value of useExactGenoDist...
+    if (useExactGenoDist) {
       /*
        * Initialize genoEtaVals and genoLnProbs arrays of appropriate sizes with
        * NaN values.
@@ -265,13 +283,13 @@ public final class RiskModel implements Serializable {
       }
     }
     /*
-     * Check that exactGenoDist argument is compatible with length of modelSNPs
-     * array.
+     * Check that useExactGenoDist argument is compatible with length of
+     * modelSNPs array.
      */
-    if ((modelSNPs.length > MAX_SNPS_EXACT) && exactGenoDist) {
+    if ((modelSNPs.length > MAX_SNPS_EXACT) && useExactGenoDist) {
       throw new IllegalArgumentException("RiskModel: Cannot calculate " +
         "exact genotype distribution with more than" + MAX_SNPS_EXACT +
-        "SNPs. Please change exactGenoDist argument to false.");
+        "SNPs. Please change useExactGenoDist argument to false.");
     }
   }
 
@@ -417,13 +435,16 @@ public final class RiskModel implements Serializable {
 
         @Override
         public double value(final double s0T) {
-          // Throw ObjFunException if s0T is not in the appropriate range.
-          if (s0T < 0.0D || s0T > 1.0D) {
-            throw new ObjFunException();
-          }
           // Try to calculate objective function value at s0T.
           try {
-            if (Precision.equals(s0T, 0.0D)) {
+            if (s0T < 0.0D || s0T > 1.0D) {
+              /*
+               * If s0T is not in the appropriate range, throw
+               * IllegalArgumentException.
+               */
+              throw new IllegalArgumentException(
+                "Baseline survivor function guess not in [0,1].");
+            } else if (Precision.equals(s0T, 0.0D)) {
               /*
                * If s0T is numerically zero (within 1 ulp), then objective
                * function value is -margSurvT.
@@ -456,8 +477,9 @@ public final class RiskModel implements Serializable {
                  */
                 // @formatter:on
                 objFunVal +=
-                  FastMath.exp((exactGenoDist ? genoLnProbs[genoIdx] : 0.0D) +
-                    FastMath.log(s0T) * FastMath.exp(genoEtaVals[genoIdx]));
+                  FastMath
+                    .exp((useExactGenoDist ? genoLnProbs[genoIdx] : 0.0D) +
+                      FastMath.log(s0T) * FastMath.exp(genoEtaVals[genoIdx]));
               }
               /*
                * If (exact/Monte Carlo) calculation, obtain final objective
@@ -467,16 +489,17 @@ public final class RiskModel implements Serializable {
                * (possible/sampled) genotypes.
                */
               objFunVal =
-                exactGenoDist ? (objFunVal - margSurvT) : (objFunVal /
+                useExactGenoDist ? (objFunVal - margSurvT) : (objFunVal /
                   MONTE_CARLO_SAMP_SIZE - margSurvT);
               return objFunVal;
             }
           } catch (Exception e) {
             /*
-             * A locally defined exception is thrown if any of the underlying
-             * calculations throw an exception. No value is returned.
+             * If any of the underlying calculations throw an exception, this is
+             * caught, packaged in a local unchecked ObjFunException, and
+             * rethrown. No value is returned.
              */
-            throw new ObjFunException();
+            throw new ObjFunException(e);
           }
         }
       };
@@ -499,7 +522,16 @@ public final class RiskModel implements Serializable {
          * that the root will be within the search interval, so range checks of
          * the solution are unnecessary.
          */
-        baseSurv[timeIdx] = solver.solve(SOLVER_MAX_EVAL, objFun, 0.0D, 1.0D);
+        try {
+          baseSurv[timeIdx] = solver.solve(SOLVER_MAX_EVAL, objFun, 0.0D, 1.0D);
+        } catch (ObjFunException e) {
+          /*
+           * If an ObjFunException is thrown, repackage the underlying cause in
+           * a RuntimeException recognizable outside of this class and throw it
+           * up the call stack.
+           */
+          throw new RuntimeException(e.getCause());
+        }
         /*
          * If this is not the first time, is the solved baseline survivor
          * function within PROB_CMP_EPSILON of the value at the previous time?
@@ -519,8 +551,168 @@ public final class RiskModel implements Serializable {
     }
   }
 
+  /**
+   * Returns an {@link Individual.RiskPrediction} object based on this
+   * {@code RiskModel} object and the information provided in the
+   * {@code inputGenos} argument.
+   * <p>
+   * {@code inputGenos} can contain genotypes for all typed SNPs in an
+   * individual, including those that are not used in the risk model. These are
+   * simply ignored. SNPs used in the risk model but not included in
+   * {@code inputGenos} are treated as missing, and the individual's prognostic
+   * index in the {@code Individual.RiskPrediction} object is given by the
+   * expected Cox model linear predictor calculated by integrating over all
+   * missing genotypes under the assumptions of HWE and linkage equilibrium.
+   * Absolute cumulative risk predictions for the individual are based on this
+   * expected prognostic index. A {@code LinkedHashMap} of SNP genotypes
+   * actually used in the risk model can be extracted from the resulting
+   * {@code Individual.RiskPrediction} object. SNPs are added to this
+   * {@code LinkedHashMap} in the same order that they are stored in the
+   * {@code RiskModel} object.
+   * 
+   * @param inputGenos {@link Individual.Genotypes} object containing an
+   *          individual's genotype information
+   */
+  public final Individual.RiskPrediction getRiskPrediction(
+    final Individual.Genotypes inputGenos) {
+    // Initialize Individual.RiskPrediction object.
+    Individual.RiskPrediction riskPrediction =
+      new Individual.RiskPrediction(inputGenos.getIndivID(), modelName);
+    // Calculate (expected) Cox model linear predictor.
+    double etaVal = 0.0D;
+    for (SNP curSNP : modelSNPs) {
+      final String rsID = curSNP.getRsID();
+      final String allele1 = inputGenos.getAllele1(rsID);
+      final String allele2 = inputGenos.getAllele2(rsID);
+      final SNP.AlleleOrientation orientRs =
+        (inputGenos.getOrientRs(rsID) != null) ? inputGenos.getOrientRs(rsID)
+          : curSNP.getOrientRs();
+      riskPrediction.addUsedGenotype(rsID, allele1, allele2);
+      etaVal += curSNP.genoScore(allele1, allele2, orientRs);
+    }
+    /*
+     * Calculate linear predictor percentile in population, assuming HWE and
+     * linkage equilibrium between SNPs.
+     */
+    double etaPctl = 0.0D;
+    for (int genoIdx = 0; genoIdx < genoEtaVals.length; genoIdx++) {
+      if (genoEtaVals[genoIdx] <= etaVal) {
+        etaPctl += useExactGenoDist ? FastMath.exp(genoLnProbs[genoIdx]) : 1.0D;
+      }
+    }
+    if (!useExactGenoDist) {
+      etaPctl /= genoEtaVals.length;
+    }
+    riskPrediction.setPrognosticIndex(etaVal, etaPctl);
+    /*
+     * Calculate predicted cumulative risk function (1 minus predicted survivor
+     * function under assumed continuous time model).
+     */
+    for (int timeIdx = 0; timeIdx < times.length; timeIdx++) {
+      final double predCumRiskT;
+      if (Precision.equals(baseSurv[timeIdx], 1.0D)) {
+        /*
+         * If the baseline survivor function is exactly 1, then the predicted
+         * cumulative risk function is exactly 1 - 1 = 0.
+         */
+        predCumRiskT = 0.0D;
+      } else if (Precision.equals(baseSurv[timeIdx], 0.0D)) {
+        /*
+         * If the baseline survivor function is exactly 0, then the predicted
+         * cumulative risk function is exactly 1 - 0 = 1.
+         */
+        predCumRiskT = 1.0D;
+      } else {
+        predCumRiskT =
+          1.0D - FastMath.exp(FastMath.log(baseSurv[timeIdx]) *
+            FastMath.exp(etaVal));
+      }
+      riskPrediction.addPredCumRiskT(times[timeIdx], predCumRiskT);
+    }
+    return riskPrediction;
+  }
+
+  /**
+   * Prints {@code RiskModel} object information using a {@code PrintWriter}.
+   * 
+   * @param pw {@code PrintWriter} for output
+   */
+  public final void print(final PrintWriter pw) {
+    final ArrayList<String> sourcePubList = new ArrayList<String>();
+    pw.println(StringUtils.repeat("=", modelName.length()));
+    pw.println(modelName);
+    pw.println(StringUtils.repeat("=", modelName.length()));
+    pw.println();
+    pw.println("SUMMARY");
+    pw.println("-------");
+    pw.println("Number of SNPs Included: " + modelSNPs.length);
+    pw.println("Genotype Distribution: " +
+      (useExactGenoDist ? "Direct Enumeration" : "Monte Carlo Approximation"));
+    if (!useExactGenoDist) {
+      pw.println("Monte Carlo Sample Size: " + MONTE_CARLO_SAMP_SIZE);
+    }
+    pw.println("Number of Survivor Function Evaluation Times: " + times.length);
+    pw.println();
+    pw.println("MODEL SNP DETAILS");
+    final String snpTableHeader =
+      String.format(Locale.US,
+        "%1$-14s | %2$-8s | %3$-8s | %4$-7s | %5$-7s | %6$-7s | %7$-3s",
+        "RS #", "A1", "A2", "ORIENT", "A2 FREQ", "A2 HR", "REF");
+    final String snpTableHrule =
+      snpTableHeader.replaceAll("[^|]", "-").replace("|", "+");
+    pw.println(snpTableHrule);
+    pw.println(snpTableHeader);
+    pw.println(snpTableHrule);
+    for (SNP curSNP : modelSNPs) {
+      /*
+       * If source publication is not in the list, add it to the end. The
+       * reference number will be the index of the source publication in the
+       * list + 1.
+       */
+      if (!sourcePubList.contains(curSNP.getSourcePub())) {
+        sourcePubList.add(curSNP.getSourcePub());
+      }
+      pw.format(Locale.US,
+        "%1$-14s | %2$-8s | %3$-8s | %4$-7s | %5$-7.3f | %6$-7.3f | %7$-3d%n",
+        curSNP.getRsID(), curSNP.getAllele1(), curSNP.getAllele2(), ((curSNP
+          .getOrientRs() == SNP.AlleleOrientation.FORWARD) ? "Forward"
+          : "Reverse"), curSNP.getAllele2Freq(), FastMath.exp(curSNP
+          .getAllele2LnHR()), sourcePubList.indexOf(curSNP.getSourcePub()) + 1);
+    }
+    pw.println(snpTableHrule);
+    /*
+     * Loop over reference list, outputting reference number and publication
+     * information.
+     */
+    for (int refNum = 1; refNum <= sourcePubList.size(); refNum++) {
+      pw.println(refNum + ") " + sourcePubList.get(refNum - 1));
+    }
+    pw.println();
+    pw.println("SURVIVOR FUNCTIONS");
+    final String lifeTableHeader =
+      String
+        .format(Locale.US, "%1$-7s | %2$-7s | %3$-7s", "t", "S(t)", "So(t)");
+    final String lifeTableHrule =
+      lifeTableHeader.replaceAll("[^|]", "-").replace("|", "+");
+    pw.println(lifeTableHrule);
+    pw.println(lifeTableHeader);
+    pw.println(lifeTableHrule);
+    for (int timeIdx = 0; timeIdx < times.length; timeIdx++) {
+      pw.format(Locale.US, "%1$-7.3f | %2$-7.3f | %3$-7.3f%n", times[timeIdx],
+        margSurv[timeIdx], baseSurv[timeIdx]);
+    }
+    pw.println(lifeTableHrule);
+    // Flush PrintWriter to ensure that output is produced.
+    pw.flush();
+  }
+
+  /** Returns {@code String} model name. */
+  protected final String getModelName() {
+    return modelName;
+  }
+
   /** Returns {@code double} array of baseline survivor function values. */
-  final double[] getBaseSurv() {
+  protected final double[] getBaseSurv() {
     return baseSurv;
   }
 

@@ -40,7 +40,7 @@ import org.junit.runners.Parameterized.Parameters;
  * JUnit test class for {@code RiskModel} class.
  * 
  * @author Daniel Kinnamon
- * @version 2014-10-07
+ * @version 2014-10-27
  * @since 2014-10-05
  */
 @RunWith(Enclosed.class)
@@ -108,7 +108,7 @@ public final class RiskModelTest {
        * distribution.
        */
       casesList.add(new Object[] { longSNPArr, goodTimes, goodMargSurv, true,
-        IllegalArgumentException.class, "exactGenoDist" });
+        IllegalArgumentException.class, "useExactGenoDist" });
       return casesList;
     }
 
@@ -150,7 +150,8 @@ public final class RiskModelTest {
     public final void test() {
       // Use try-catch block for exception checking.
       try {
-        new RiskModel(testSNPs, testTimes, testMargSurv, testExactGenoDist);
+        new RiskModel("Test Model Name", testSNPs, testTimes, testMargSurv,
+          testExactGenoDist);
         /*
          * Code in the try block below this comment should not be executed
          * because all test cases result in exceptions.
@@ -368,21 +369,24 @@ public final class RiskModelTest {
        * constructor.
        */
       final RiskModel testRiskModel =
-        new RiskModel(testSNPs, testTimes, testMargSurv, testExactGenoDist);
+        new RiskModel("Test Model Name", testSNPs, testTimes, testMargSurv,
+          testExactGenoDist);
       /*
        * Print original and solved baseline survivor function values as well as
        * differences.
        */
       System.out.println("<<<=== RiskModelTest.SolveBaseSurvTest: " +
         testSNPs.length + " SNPs, " +
-        (testExactGenoDist ? "Exact" : "Monte Carlo") + " ===>>>\n");
+        (testExactGenoDist ? "Exact" : "Monte Carlo") + " ===>>>");
+      System.out.println();
       System.out.println("Original baseline survivor function values:");
       System.out.println(Arrays.toString(testBaseSurv));
       System.out.println("Solved baseline survivor function values:");
       System.out.println(Arrays.toString(testRiskModel.getBaseSurv()));
       System.out.println("Differences:");
       System.out.println(Arrays.toString(MathArrays.ebeSubtract(testBaseSurv,
-        testRiskModel.getBaseSurv())) + "\n");
+        testRiskModel.getBaseSurv())));
+      System.out.println();
       /*
        * Check that original and solved baseline survivor function values are
        * all are within absolute tolerance of each other (1e-8 for direct

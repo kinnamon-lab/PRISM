@@ -38,23 +38,23 @@ import org.apache.commons.math3.util.FastMath;
  * 
  * @author Daniel Kinnamon
  * @author Chuhan Zhang
- * @version 2014-10-07
+ * @version 2014-10-27
  * @since 2014-09-01
  */
 public final class SNP implements Serializable {
+
+  /**
+   * The {@code serialVersionUID} should be automatically regenerated within the
+   * IDE whenever the fields of the class change. It should not be changed if
+   * only the methods change.
+   */
+  private static final long serialVersionUID = -4177085957451410411L;
 
   /** Allele orientation values for a SNP */
   public static enum AlleleOrientation {
     FORWARD, REVERSE
   }
 
-  /**
-   * The {@code serialVersionUID} should be incremented by 1 every time an
-   * incompatible change (for serialization) is made to the class. If all
-   * changes are compatible, then the {@code serialVersionUID} should not be
-   * changed.
-   */
-  private static final long serialVersionUID = 1L;
   /** @serial {@code String} dbSNP refSNP identifier (i.e., rs number). */
   private final String rsID;
   /** @serial {@code String} source publication reference. */
@@ -101,8 +101,8 @@ public final class SNP implements Serializable {
         " is an invalid rs ID.");
     }
     this.sourcePub = sourcePub;
-    this.allele1 = allele1.toUpperCase(Locale.ENGLISH);
-    this.allele2 = allele2.toUpperCase(Locale.ENGLISH);
+    this.allele1 = allele1.toUpperCase(Locale.US);
+    this.allele2 = allele2.toUpperCase(Locale.US);
     // Regular expression describing form of all valid allele values.
     final String validAlleleRegex = "^-$|^[ACGT]+$";
     // Check that stored alleles match this regex.
@@ -230,8 +230,8 @@ public final class SNP implements Serializable {
      * constructor). Must convert input alleles to uppercase using English
      * locale for proper matching.
      */
-    final String upperInAllele1 = inAllele1.toUpperCase(Locale.ENGLISH);
-    final String upperInAllele2 = inAllele2.toUpperCase(Locale.ENGLISH);
+    final String upperInAllele1 = inAllele1.toUpperCase(Locale.US);
+    final String upperInAllele2 = inAllele2.toUpperCase(Locale.US);
     // Regular expression describing form of all valid allele values.
     final String validAlleleRegex = "^-$|^0$|^[ACGT]+$";
     // Check that uppercase input alleles match this regex.

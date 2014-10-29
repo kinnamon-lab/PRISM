@@ -23,7 +23,10 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.math3.analysis.function.Exp;
+import org.apache.commons.math3.analysis.function.Log;
 import org.apache.commons.math3.distribution.BinomialDistribution;
+import org.apache.commons.math3.linear.ArrayRealVector;
 import org.apache.commons.math3.random.MersenneTwister;
 import org.apache.commons.math3.util.ArithmeticUtils;
 import org.apache.commons.math3.util.FastMath;
@@ -40,7 +43,7 @@ import org.junit.runners.Parameterized.Parameters;
  * JUnit test class for {@code RiskModel} class.
  * 
  * @author Daniel Kinnamon
- * @version 2014-10-27
+ * @version 2014-10-29
  * @since 2014-10-05
  */
 @RunWith(Enclosed.class)
@@ -170,17 +173,18 @@ public final class RiskModelTest {
   }
 
   /**
-   * Parameterized inner test class for {@code RiskModel} constructor baseline
-   * survivor function solving.
+   * Parameterized inner end-to-end test class for {@code RiskModel} class
+   * calculations, from baseline survivor function solving during construction
+   * to risk prediction generation.
    */
   @RunWith(Parameterized.class)
-  public static final class SolveBaseSurvTest {
+  public static final class CalculationsTest {
 
     /**
      * Produces a collection of {@code Object} arrays containing parameters
      * defining each test case.
      */
-    @Parameters(name = "SolveBaseSurvTest: Case {index}")
+    @Parameters(name = "CalculationsTest: Case {index}")
     public static final Collection<Object[]> cases() {
       // Declare ArrayList to hold test cases.
       final ArrayList<Object[]> casesList = new ArrayList<Object[]>();
@@ -313,7 +317,7 @@ public final class RiskModelTest {
         for (int timeIdx = 0; timeIdx < margSurv.length; timeIdx++) {
           if (margSurv[timeIdx] > 1.0001D) {
             throw new RuntimeException(
-              "SolveBaseSurvTest: Calculated marginal survivor function "
+              "CalculationsTest: Calculated marginal survivor function "
                 + "value for test case exceeds 1 by more than 1e-4.");
           } else if (margSurv[timeIdx] > 1.0D) {
             margSurv[timeIdx] = 1.0D;
@@ -359,7 +363,7 @@ public final class RiskModelTest {
     public boolean testExactGenoDist;
 
     /**
-     * Runs test on {@code SolveBaseSurvTest} object instantiated for a
+     * Runs test on {@code CalculationsTest} object instantiated for a
      * particular test case.
      */
     @Test
@@ -375,7 +379,7 @@ public final class RiskModelTest {
        * Print original and solved baseline survivor function values as well as
        * differences.
        */
-      System.out.println("<<<=== RiskModelTest.SolveBaseSurvTest: " +
+      System.out.println("<<<=== RiskModelTest.CalculationsTest: " +
         testSNPs.length + " SNPs, " +
         (testExactGenoDist ? "Exact" : "Monte Carlo") + " ===>>>");
       System.out.println();
@@ -389,7 +393,7 @@ public final class RiskModelTest {
       System.out.println();
       /*
        * Check that original and solved baseline survivor function values are
-       * all are within absolute tolerance of each other (1e-8 for direct
+       * all within absolute tolerance of each other (1e-8 for direct
        * enumeration, 6.16e-4 for Monte Carlo approximation). The tolerance of
        * 6.16e-4 for the Monte Carlo approximation was chosen based upon the
        * Monte Carlo sampling error bound for the estimate of the marginal
@@ -400,6 +404,62 @@ public final class RiskModelTest {
         (testExactGenoDist ? "direct enumeration."
           : "Monte Carlo approximation."), testBaseSurv,
         testRiskModel.getBaseSurv(), testExactGenoDist ? 1e-8 : 6.16e-4);
+      /*
+       * Test individual risk predictions for an allele 1 homozygote, a
+       * heterozygote, or an allele 2 homozygote at all SNPs.
+       */
+      for (int numAllele2 = 0; numAllele2 <= 2; numAllele2++) {
+        double testCorPrognosticIndex = 0.0D;
+        final Individual.Genotypes testGenos =
+          new Individual.Genotypes("TestID");
+        for (SNP curSNP : testSNPs) {
+          final String inAllele1 =
+            (numAllele2 == 0) ? curSNP.getAllele1() : curSNP.getAllele2();
+          final String inAllele2 =
+            (numAllele2 == 2) ? curSNP.getAllele2() : curSNP.getAllele1();
+          testGenos.addGenotype(curSNP.getRsID(), inAllele1, inAllele2,
+            curSNP.getOrientRs());
+          testCorPrognosticIndex += numAllele2 * curSNP.getAllele2LnHR();
+        }
+        final Individual.RiskPrediction testPred =
+          testRiskModel.getRiskPrediction(testGenos);
+        System.out.println("Prediction tests: All SNPs " + numAllele2 +
+          " Copies Allele 2");
+        System.out.println("--------------------------------------------");
+        // Check prognostic index.
+        System.out.println("Correct prognostic index: " +
+          testCorPrognosticIndex);
+        System.out.println("RiskModel prognostic index: " +
+          testPred.getPrognosticIndex());
+        Assert.assertEquals("RiskModel prognostic index is incorrect.",
+          testCorPrognosticIndex, testPred.getPrognosticIndex(), 1e-12);
+        /*
+         * Check cumulative risk/survivor function predictions. Use same
+         * absolute tolerances described above.
+         */
+        final double[] testCorSurv =
+          (numAllele2 == 0) ? testBaseSurv : new ArrayRealVector(testBaseSurv)
+            .mapToSelf(new Log())
+            .mapMultiplyToSelf(FastMath.exp(testCorPrognosticIndex))
+            .mapToSelf(new Exp()).toArray();
+        final double[] testPredSurv =
+          new ArrayRealVector(testPred.getPredCumRisk())
+            .mapMultiplyToSelf(-1.0D).mapAddToSelf(1.0D).toArray();
+        System.out.println("Correct survivor function values:");
+        System.out.println(Arrays.toString(testCorSurv));
+        System.out.println("RiskModel survivor function values:");
+        System.out.println(Arrays.toString(testPredSurv));
+        System.out.println("Differences:");
+        System.out.println(Arrays.toString(MathArrays.ebeSubtract(testCorSurv,
+          testPredSurv)));
+        Assert.assertArrayEquals("RiskModel survivor/cumulative risk " +
+          "function is incorrect with " +
+          (testExactGenoDist ? "direct enumeration."
+            : "Monte Carlo approximation."), testCorSurv, testPredSurv,
+          testExactGenoDist ? 1e-8 : 6.16e-4);
+        System.out.println();
+      }
+      System.out.println();
     }
 
   }

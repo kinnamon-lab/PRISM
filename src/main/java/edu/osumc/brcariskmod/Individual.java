@@ -23,65 +23,91 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.ImmutableTriple;
 
 /**
  * Individual data wrapper class.
  * 
  * @author Daniel Kinnamon
- * @version 2014-10-26
+ * @version 2014-10-29
  * @since 2014-10-26
  */
 public final class Individual {
 
-  /** Individual genotype data. */
+  /**
+   * Individual genotype data.
+   * <p>
+   * The constructor, setters, and getters are part of the API so that users can
+   * package individual genotype data into a single {@code Genotype} object and
+   * pass it to the {@link RiskModel#getRiskPrediction(Genotypes)
+   * RiskModel.getRiskPrediction} method to obtain individual risk predictions.
+   */
   public static final class Genotypes {
 
     /** {@code String} individual identifier. */
     private final String indivID;
     /**
-     * {@code HashMap<String, SNP.AlleleOrientation>} containing
-     * {@link SNP.AlleleOrientation} allele orientation values (relative to
-     * RefSNP) for SNPs identified by {@code String} dbSNP refSNP identifier
-     * keys.
+     * {@code HashMap<String, ImmutableTriple<String, String, SNP.AlleleOrientation>>}
+     * containing {@link ImmutableTriple} values storing individual genotype
+     * data (one string for each allele and a {@link SNP.AlleleOrientation}
+     * constant) for each SNP identified by a {@code String} dbSNP refSNP
+     * identifier key.
      */
-    private final HashMap<String, SNP.AlleleOrientation> orientRsMap;
-    /**
-     * {@code HashMap<String, MutablePair<String, String>>} containing
-     * {@code MutablePair<String, String>} genotype values (one string for each
-     * allele) for SNPs identified by {@code String} dbSNP refSNP identifier
-     * keys.
-     */
-    private final HashMap<String, ImmutablePair<String, String>> genotypeRsMap;
+    private final HashMap<String, ImmutableTriple<String, String, SNP.AlleleOrientation>> genotypeRsMap;
 
     /**
      * Constructs a {@code Genotypes} object ready to receive genotypes for an
      * individual.
      * 
      * @param indivID {@code String} individual identifier
-     * @param orientRsMap {@code HashMap<String, SNP.AlleleOrientation>}
-     *          containing {@link SNP.AlleleOrientation} allele orientation
-     *          values (relative to RefSNP) for SNPs identified by
-     *          {@code String} dbSNP refSNP identifier keys
      */
-    public Genotypes(final String indivID,
-      final HashMap<String, SNP.AlleleOrientation> orientRsMap) {
+    public Genotypes(final String indivID) {
       this.indivID = indivID;
-      this.orientRsMap = orientRsMap;
-      genotypeRsMap = new HashMap<String, ImmutablePair<String, String>>();
+      genotypeRsMap =
+        new HashMap<String, ImmutableTriple<String, String, SNP.AlleleOrientation>>();
     }
 
     /**
-     * Sets genotype value for a given SNP.
+     * Adds genotype value for a given SNP.
      * 
      * @param rsID {@code String} dbSNP refSNP identifier (i.e., rs number)
      * @param allele1 {@code String} allele 1 at SNP for individual
      * @param allele2 {@code String} allele 2 at SNP for individual
+     * @param orientRs {@link SNP.AlleleOrientation} allele orientation values
+     *          (relative to RefSNP) for SNP
      */
-    public final void setGenotype(final String rsID, final String allele1,
-      final String allele2) {
-      genotypeRsMap.put(rsID, new ImmutablePair<String, String>(allele1,
-        allele2));
+    public final void addGenotype(final String rsID, final String allele1,
+      final String allele2, final SNP.AlleleOrientation orientRs) {
+      // Check that input rsID has valid form.
+      if (!rsID.matches("^rs[0-9]+$")) {
+        throw new IllegalArgumentException("Genotypes.addGenotype: " + rsID +
+          " is an invalid rs ID.");
+      }
+      // Regular expression describing form of all valid allele values.
+      final String validAlleleRegex = "^-$|^0$|^[AaCcGgTt]+$";
+      // Check that input alleles match this regex.
+      if (!(allele1.matches(validAlleleRegex) && allele2
+        .matches(validAlleleRegex))) {
+        throw new IllegalArgumentException("Genotypes.addGenotype: There " +
+          "is an invalid input allele for SNP " + rsID + " in individual " +
+          indivID + ". Valid input alleles can be '-', '0', or any string " +
+          "containing only the characters 'A', 'C', 'G', and 'T' in upper " +
+          "or lower case.");
+      }
+      // Check that either both input alleles are "0" or neither is "0".
+      if (allele1.equals("0") ^ allele2.equals("0")) {
+        throw new IllegalArgumentException("Genotypes.addGenotype: Neither " +
+          "or both of the two input alleles should be '0' for SNP " + rsID +
+          " in individual " + indivID + ".");
+      }
+      // Check that input allele orientation is not null.
+      if (orientRs == null) {
+        throw new IllegalArgumentException("Genotypes.addGenotype: SNP " +
+          rsID + " must have an allele orientation provided.");
+      }
+      genotypeRsMap.put(rsID,
+        new ImmutableTriple<String, String, SNP.AlleleOrientation>(allele1,
+          allele2, orientRs));
     }
 
     /** Returns {@code String} individual identifier. */
@@ -108,22 +134,33 @@ public final class Individual {
      */
     public final String getAllele2(final String rsID) {
       return genotypeRsMap.containsKey(rsID) ? genotypeRsMap.get(rsID)
-        .getRight() : "0";
+        .getMiddle() : "0";
     }
 
     /**
-     * Returns {@code SNP.AlleleOrientation} allele orientation for the SNP with
-     * identifier {@code rsID} if it is available and {@code null} otherwise.
+     * Returns {@link SNP.AlleleOrientation} allele orientation (relative to
+     * RefSNP) for the SNP with identifier {@code rsID} if it is available and
+     * {@code null} otherwise.
      * 
      * @param rsID {@code String} dbSNP refSNP identifier (i.e., rs number)
      */
     public final SNP.AlleleOrientation getOrientRs(final String rsID) {
-      return orientRsMap.containsKey(rsID) ? orientRsMap.get(rsID) : null;
+      return genotypeRsMap.containsKey(rsID) ? genotypeRsMap.get(rsID)
+        .getRight() : null;
     }
 
   }
 
-  /** Individual risk prediction from a particular risk model. */
+  /**
+   * Individual risk prediction from a particular risk model.
+   * <p>
+   * Getters are part of the API, but the constructor and setters can only be
+   * called from within this package. This ensures that {@code RiskPrediction}
+   * object state can only be modified within methods of other package classes,
+   * namely the {@link RiskModel#getRiskPrediction(Genotypes)
+   * RiskModel.getRiskPrediction} method. This obviates the need for
+   * constructor/setter argument checking.
+   */
   public static final class RiskPrediction {
 
     /** {@code String} individual identifier. */
@@ -166,7 +203,7 @@ public final class Individual {
      * @param indivID {@code String} individual identifier
      * @param modelName {@code String} risk model name
      */
-    public RiskPrediction(final String indivID, final String modelName) {
+    RiskPrediction(final String indivID, final String modelName) {
       this.indivID = indivID;
       this.modelName = modelName;
       usedGenotypesRsMap = new LinkedHashMap<String, String>();
@@ -182,7 +219,7 @@ public final class Individual {
      * @param allele1 {@code String} used allele 1 at SNP for individual
      * @param allele2 {@code String} used allele 2 at SNP for individual
      */
-    public final void addUsedGenotype(final String rsID, final String allele1,
+    final void addUsedGenotype(final String rsID, final String allele1,
       final String allele2) {
       usedGenotypesRsMap.put(rsID, allele1 + "/" + allele2);
     }
@@ -193,7 +230,7 @@ public final class Individual {
      * @param prognosticIndex {@code double} prognostic index for an individual
      * @param prognosticIndexPctl {@code double} prognostic index percentile
      */
-    public final void setPrognosticIndex(final double prognosticIndex,
+    final void setPrognosticIndex(final double prognosticIndex,
       final double prognosticIndexPctl) {
       this.prognosticIndex = prognosticIndex;
       this.prognosticIndexPctl = prognosticIndexPctl;
@@ -209,8 +246,7 @@ public final class Individual {
      * @param predCumRiskT {@code double} predicted cumulative risk for an
      *          individual at time {@code t}
      */
-    public final void
-      addPredCumRiskT(final double t, final double predCumRiskT) {
+    final void addPredCumRiskT(final double t, final double predCumRiskT) {
       timesList.add(t);
       predCumRiskList.add(predCumRiskT);
     }

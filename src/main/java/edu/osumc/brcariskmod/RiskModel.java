@@ -51,7 +51,7 @@ import org.apache.commons.math3.util.Precision;
  * then saved for later use.
  * 
  * @author Daniel Kinnamon
- * @version 2014-10-27
+ * @version 2014-10-29
  * @since 2014-09-23
  */
 public final class RiskModel implements Serializable {
@@ -156,7 +156,7 @@ public final class RiskModel implements Serializable {
      * Constructs an ObjFunException object that packages the underlying
      * exception.
      */
-    public ObjFunException(final Throwable cause) {
+    ObjFunException(final Throwable cause) {
       super(cause);
     }
   }
@@ -707,12 +707,12 @@ public final class RiskModel implements Serializable {
   }
 
   /** Returns {@code String} model name. */
-  protected final String getModelName() {
+  final String getModelName() {
     return modelName;
   }
 
   /** Returns {@code double} array of baseline survivor function values. */
-  protected final double[] getBaseSurv() {
+  final double[] getBaseSurv() {
     return baseSurv;
   }
 

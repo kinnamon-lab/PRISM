@@ -46,7 +46,7 @@ import org.apache.commons.math3.util.Precision;
  * the package API nor included in the final artifact.
  * 
  * @author Daniel Kinnamon
- * @version 2014-10-30
+ * @version 2014-10-31
  * @since 2014-10-30
  */
 final class RiskModelBuilder {
@@ -251,12 +251,12 @@ final class RiskModelBuilder {
              * Check that string input is parsed properly (alleles are checked
              * by the SNP constructor).
              */
-            if (!modelID.matches("brca[12](breast|ovarian)")) {
+            if (!modelID.matches("^brca[12](breast|ovarian)$")) {
               throw new IOException("Model SNPs file BRCA mutation type must "
                 + "be '1' or '2' and cancer type must be 'Breast' or "
                 + "'Ovarian'.");
             }
-            if (!orientRsStr.matches("FORWARD|REVERSE")) {
+            if (!orientRsStr.matches("^(FORWARD|REVERSE)$")) {
               throw new IOException("Model SNPs file allele orientation "
                 + "relative to RefSNP must be 'Forward' or 'Reverse'.");
             }

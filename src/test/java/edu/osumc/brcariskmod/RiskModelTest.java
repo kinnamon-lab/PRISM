@@ -43,7 +43,7 @@ import org.junit.runners.Parameterized.Parameters;
  * JUnit test class for {@code RiskModel} class.
  * 
  * @author Daniel Kinnamon
- * @version 2014-10-29
+ * @version 2014-10-31
  * @since 2014-10-05
  */
 @RunWith(Enclosed.class)
@@ -417,8 +417,11 @@ public final class RiskModelTest {
             (numAllele2 == 0) ? curSNP.getAllele1() : curSNP.getAllele2();
           final String inAllele2 =
             (numAllele2 == 2) ? curSNP.getAllele2() : curSNP.getAllele1();
+          final String orientRsStr =
+            (curSNP.getOrientRs() == SNP.AlleleOrientation.FORWARD) ? "Forward"
+              : "Reverse";
           testGenos.addGenotype(curSNP.getRsID(), inAllele1, inAllele2,
-            curSNP.getOrientRs());
+            orientRsStr);
           testCorPrognosticIndex += numAllele2 * curSNP.getAllele2LnHR();
         }
         final Individual.RiskPrediction testPred =

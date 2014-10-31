@@ -51,7 +51,7 @@ import org.apache.commons.math3.util.Precision;
  * then saved for later use.
  * 
  * @author Daniel Kinnamon
- * @version 2014-10-29
+ * @version 2014-10-31
  * @since 2014-09-23
  */
 public final class RiskModel implements Serializable {
@@ -156,7 +156,7 @@ public final class RiskModel implements Serializable {
      * Constructs an ObjFunException object that packages the underlying
      * exception.
      */
-    ObjFunException(final Throwable cause) {
+    private ObjFunException(final Throwable cause) {
       super(cause);
     }
   }

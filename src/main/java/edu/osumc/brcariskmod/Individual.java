@@ -21,6 +21,7 @@ package edu.osumc.brcariskmod;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.tuple.ImmutableTriple;
@@ -29,7 +30,7 @@ import org.apache.commons.lang3.tuple.ImmutableTriple;
  * Individual data wrapper class.
  * 
  * @author Daniel Kinnamon
- * @version 2014-10-29
+ * @version 2014-10-30
  * @since 2014-10-26
  */
 public final class Individual {
@@ -73,11 +74,11 @@ public final class Individual {
      * @param rsID {@code String} dbSNP refSNP identifier (i.e., rs number)
      * @param allele1 {@code String} allele 1 at SNP for individual
      * @param allele2 {@code String} allele 2 at SNP for individual
-     * @param orientRs {@link SNP.AlleleOrientation} allele orientation values
-     *          (relative to RefSNP) for SNP
+     * @param orientRsStr {@code String} allele orientation values (relative to
+     *          RefSNP) for SNP
      */
     public final void addGenotype(final String rsID, final String allele1,
-      final String allele2, final SNP.AlleleOrientation orientRs) {
+      final String allele2, final String orientRsStr) {
       // Check that input rsID has valid form.
       if (!rsID.matches("^rs[0-9]+$")) {
         throw new IllegalArgumentException("Genotypes.addGenotype: " + rsID +
@@ -100,11 +101,15 @@ public final class Individual {
           "or both of the two input alleles should be '0' for SNP " + rsID +
           " in individual " + indivID + ".");
       }
-      // Check that input allele orientation is not null.
-      if (orientRs == null) {
+      // Check that input allele orientation string is valid.
+      if (!orientRsStr.toUpperCase(Locale.US).matches("^(FORWARD|REVERSE)$")) {
         throw new IllegalArgumentException("Genotypes.addGenotype: SNP " +
-          rsID + " must have an allele orientation provided.");
+          rsID + " must have an allele orientation relative to RefSNP of " +
+          "'Forward' or 'Reverse' provided.");
       }
+      final SNP.AlleleOrientation orientRs =
+        orientRsStr.toUpperCase(Locale.US).matches("FORWARD")
+          ? SNP.AlleleOrientation.FORWARD : SNP.AlleleOrientation.REVERSE;
       genotypeRsMap.put(rsID,
         new ImmutableTriple<String, String, SNP.AlleleOrientation>(allele1,
           allele2, orientRs));

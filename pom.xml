@@ -23,7 +23,7 @@ the License.
   <!-- Project artifact information. -->
   <groupId>edu.osumc</groupId>
   <artifactId>brcariskmod</artifactId>
-  <version>0.1.2</version>
+  <version>0.1.3-SNAPSHOT</version>
 
   <!-- Project dependencies. -->
   <dependencies>
@@ -244,7 +244,7 @@ the License.
   <scm>
     <connection>scm:git:file:///nfs/06/osu7476/git_remotes/brcariskmod.git</connection>
     <developerConnection>scm:git:file:///nfs/06/osu7476/git_remotes/brcariskmod.git</developerConnection>
-    <tag>0.1.2</tag>
+    <tag>HEAD</tag>
   </scm>
   <distributionManagement>
     <repository>

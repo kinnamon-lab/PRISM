@@ -56,18 +56,9 @@ the License.
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
-  <!-- Plugin configuration for standard jar lifecycle. -->
   <build>
     <plugins>
-      <!-- Configuration for release plugin -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-release-plugin</artifactId>
-        <version>2.5.1</version>
-        <configuration>
-          <tagNameFormat>@{project.version}</tagNameFormat>
-        </configuration>
-      </plugin>
+      <!-- Plugin configuration for standard jar lifecycle. -->
       <!-- Configuration for resources plugin in process-resources lifecycle phase. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -196,6 +187,22 @@ the License.
           </execution>
         </executions>
       </plugin>
+      <!-- Configuration for release helper plugins. -->
+      <!-- Global configuration for release plugin. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+        <version>2.5.1</version>
+        <configuration>
+          <tagNameFormat>@{project.version}</tagNameFormat>
+        </configuration>
+      </plugin>
+      <!-- Global configuration for scm plugin. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-scm-plugin</artifactId>
+        <version>1.9.2</version>
+      </plugin>
     </plugins>
   </build>
 
@@ -233,7 +240,7 @@ the License.
     </contributor>
   </contributors>
   
-  <!-- Environment settings -->
+  <!-- Environment settings. -->
   <scm>
     <connection>scm:git:file:///nfs/06/osu7476/git_remotes/brcariskmod.git</connection>
     <developerConnection>scm:git:file:///nfs/06/osu7476/git_remotes/brcariskmod.git</developerConnection>
@@ -241,9 +248,9 @@ the License.
   </scm>
   <distributionManagement>
     <repository>
-      <id>kinnlab-production</id>
+      <id>kinnlab-release</id>
       <uniqueVersion>false</uniqueVersion>
-      <url>file:///nfs/06/osu7476/maven_repositories/production</url>
+      <url>file:///nfs/06/osu7476/maven_repositories/release</url>
       <layout>default</layout>
     </repository>
     <snapshotRepository>
@@ -254,4 +261,15 @@ the License.
     </snapshotRepository>
   </distributionManagement>
 
+  <!-- Profiles to override standard settings. -->
+  <profiles>
+    <!-- Profile to skip compiling and running JUnit tests. -->
+    <profile>
+      <id>noJUnit</id>
+      <properties>
+        <maven.test.skip>true</maven.test.skip>
+      </properties>
+    </profile>
+  </profiles>
+  
 </project>

@@ -1,5 +1,5 @@
 /*
- * This source file is part of the BRCA Risk Modifiers software package.
+ * This source file is part of the PRISM software package.
  * 
  * Copyright 2014 The Ohio State University Wexner Medical Center
  * 
@@ -16,7 +16,7 @@
  * the License.
  */
 
-package edu.osumc.brcariskmod;
+package edu.osumc.PRISM;
 
 import java.io.Serializable;
 import java.util.Locale;

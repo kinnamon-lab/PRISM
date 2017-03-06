@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- 
-This POM file is part of the BRCA Risk Modifiers software package.
+This POM file is part of the PRISM software package.
 
 Copyright 2014 The Ohio State University Wexner Medical Center
 
@@ -22,8 +22,8 @@ the License.
 
   <!-- Project artifact information. -->
   <groupId>edu.osumc</groupId>
-  <artifactId>brcariskmod</artifactId>
-  <version>0.1.3-SNAPSHOT</version>
+  <artifactId>prism</artifactId>
+  <version>0.2.6-SNAPSHOT</version>
 
   <!-- Project dependencies. -->
   <dependencies>
@@ -123,7 +123,7 @@ the License.
               <arguments>
                 <argument>-classpath</argument>
                 <classpath />
-                <argument>edu.osumc.brcariskmod.RiskModelBuilder</argument>
+                <argument>edu.osumc.prism.RiskModelBuilder</argument>
                 <argument>${project.build.outputDirectory}/riskmodels/modelSNPs.dat</argument>
                 <argument>${project.build.outputDirectory}/riskmodels/annInc.dat</argument>
                 <argument>${project.build.outputDirectory}/riskmodels/</argument>
@@ -144,7 +144,7 @@ the License.
           <archive>
             <manifest>
               <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-              <mainClass>edu.osumc.brcariskmod.RiskPredictor</mainClass>
+              <mainClass>edu.osumc.prism.RiskPredictor</mainClass>
             </manifest>
           </archive>
           <forceCreation>true</forceCreation>
@@ -162,9 +162,9 @@ the License.
           <createSourcesJar>true</createSourcesJar>
           <filters>
             <filter>
-              <artifact>edu.osumc:brcariskmod</artifact>
+              <artifact>edu.osumc:prism</artifact>
               <excludes>
-                <exclude>edu/osumc/brcariskmod/RiskModelBuilder*</exclude>
+                <exclude>edu/osumc/prism/RiskModelBuilder*</exclude>
               </excludes>
             </filter>
           </filters>
@@ -207,7 +207,7 @@ the License.
   </build>
 
   <!-- Additional package metadata. -->
-  <name>BRCA Risk Modifiers</name>
+  <name>PRISM</name>
   <licenses>
     <license>
       <name>Apache License, Version 2.0</name>
@@ -242,21 +242,21 @@ the License.
   
   <!-- Environment settings. -->
   <scm>
-    <connection>scm:git:file:///nfs/06/osu7476/git_remotes/brcariskmod.git</connection>
-    <developerConnection>scm:git:file:///nfs/06/osu7476/git_remotes/brcariskmod.git</developerConnection>
+    <connection>https://github.com/kinnamon-lab/PRISM.git/</connection>
+    <developerConnection>https://github.com/kinnamon-lab/PRISM.git/</developerConnection>
     <tag>HEAD</tag>
   </scm>
   <distributionManagement>
     <repository>
       <id>kinnlab-release</id>
       <uniqueVersion>false</uniqueVersion>
-      <url>file:///nfs/06/osu7476/maven_repositories/release</url>
+      <url>https://github.com/kinnamon-lab/PRISM.git/release/</url>
       <layout>default</layout>
     </repository>
     <snapshotRepository>
       <id>kinnlab-snapshots</id>
       <uniqueVersion>true</uniqueVersion>
-      <url>file:///nfs/06/osu7476/maven_repositories/snapshots</url>
+      <url>file:///nfs/06/osu7476/maven_repositories/snapshots/snapshots/</url>
       <layout>default</layout>
     </snapshotRepository>
   </distributionManagement>

@@ -16,7 +16,7 @@
  * the License.
  */
 
-package edu.osumc.brcariskmod;
+package edu.osumc.PRISM;
 
 import java.io.PrintWriter;
 import java.io.Serializable;
@@ -712,7 +712,7 @@ public final class RiskModel implements Serializable {
   }
 
   /** Returns {@code double} array of baseline survivor function values. */
-  final double[] getBaseSurv() {
+  public final double[] getBaseSurv() {
     return baseSurv;
   }
 

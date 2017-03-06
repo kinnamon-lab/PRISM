@@ -1,5 +1,5 @@
 /*
- * This source file is part of the BRCA Risk Modifiers software package.
+ * This source file is part of the PRISM software package.
  * 
  * Copyright 2014 The Ohio State University Wexner Medical Center
  * 
@@ -16,7 +16,7 @@
  * the License.
  */
 
-package edu.osumc.brcariskmod;
+package edu.osumc.PRISM;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -49,8 +49,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.text.WordUtils;
 
 /**
- * Command-line interface for obtaining risk predictions from the BRCA Risk
- * Modifiers package.
+ * Command-line interface for obtaining risk predictions from the PRISM
+ * package.
  * <p>
  * This package-private class contains several private static methods and a
  * {@code main} method to provide an application entry point in the package JAR
@@ -73,9 +73,9 @@ final class RiskPredictor {
    */
   private static final void printMasthead(final PrintWriter pw) {
     final String version =
-      Package.getPackage("edu.osumc.brcariskmod").getImplementationVersion();
+      Package.getPackage("edu.osumc.prismriskmod").getImplementationVersion();
     pw.println(StringUtils.repeat("=", 79));
-    pw.println(StringUtils.center("BRCA RISK MODIFIERS", 79));
+    pw.println(StringUtils.center("PRISM - Polygenic Risk Score Models", 79));
     pw.println(StringUtils.center("* Version " + version + " *", 79));
     pw.println(StringUtils.center("-- Copyright 2014 The Ohio State "
       + "University Wexner Medical Center --", 79));
@@ -98,10 +98,51 @@ final class RiskPredictor {
   private static final void printHelp(final Options options,
     final PrintWriter pw) {
     final String version =
-      Package.getPackage("edu.osumc.brcariskmod").getImplementationVersion();
+      Package.getPackage("edu.osumc.prismriskmod").getImplementationVersion();
     new HelpFormatter().printHelp(pw, HelpFormatter.DEFAULT_WIDTH,
-      "java -jar brcariskmod-" + version + ".jar", "", options,
+      "java -jar prismriskmod-" + version + ".jar", "", options,
       HelpFormatter.DEFAULT_LEFT_PAD, HelpFormatter.DEFAULT_DESC_PAD, "", true);
+  }
+  
+  /**
+   * Searches the {@link RiskModel} objects (*.rmo files) contained in the
+   * /riskmodels resource of the package JAR file for targetModelID and returns a 
+   * {@code LinkedHashMap} of the model identified by its modelID.
+   */
+  private static final LinkedHashMap<String, RiskModel> loadRiskModel(String targetModelID)
+    throws URISyntaxException, IOException, ClassNotFoundException {
+    final LinkedHashMap<String, RiskModel> riskModelMap =
+      new LinkedHashMap<String, RiskModel>();
+    // Get JarFile object for JAR file containing the current class.
+    final JarFile jarFile =
+      ((JarURLConnection) (RiskPredictor.class).getResource(
+        "RiskPredictor.class").openConnection()).getJarFile();
+    /*
+     * Iterate over JarFile entries to find all riskmodels/*.rmo entries and
+     * deserialize the RiskModel objects therein.
+     */
+    for (Enumeration<JarEntry> jarEntries = jarFile.entries(); jarEntries
+      .hasMoreElements();) {
+      final JarEntry curEntry = jarEntries.nextElement();
+      if (curEntry.getName().matches("^riskmodels/.+\\.rmo$")) {
+        // If RiskModel object entry, extract modelID from filename.
+        final String modelID =
+          curEntry.getName().replaceFirst("^riskmodels/", "")
+            .replaceFirst("\\.rmo$", "");
+        // Create new ObjectInputStream to read RiskModel object entry.
+        try (
+          ObjectInputStream riskModelObjInStream =
+            new ObjectInputStream(jarFile.getInputStream(curEntry))) {
+          /*
+           * Deserialize RiskModel object entry to RiskModel object stored in
+           * map with key modelID.
+           */
+          riskModelMap.put(modelID,
+            (RiskModel) riskModelObjInStream.readObject());
+        } // ObjectInputStream automatically closed here.
+      }
+    }
+    return riskModelMap;
   }
 
   /**
@@ -358,8 +399,8 @@ final class RiskPredictor {
     // Define command line options.
     final Option help =
       new Option("h", "help", false, "Print this usage information.");
-    final Option models =
-      new Option("m", "models", false, "Print available risk model "
+    final Option listModels =
+      new Option("l", "list_models", false, "Print available risk model "
         + "information to console.");
     final Option predict =
       new Option("p", "predict", true,
@@ -369,6 +410,9 @@ final class RiskPredictor {
           + "one for each risk model, and logging information will be printed "
           + "to the console.");
     predict.setArgName("fileroot");
+    final Option models= new Option("m", "modelID", true, "Declare which model "
+    		+ "to use when generating risk predictions. Leave blank to use all "
+    		+ "available models.");
     /*
      * Make options a mutually exclusive group so only one can be selected at a
      * time. Make the group required so that at least one of these options must
@@ -376,12 +420,13 @@ final class RiskPredictor {
      */
     final OptionGroup modes = new OptionGroup();
     modes.addOption(help);
-    modes.addOption(models);
+    modes.addOption(listModels);
     modes.addOption(predict);
     modes.setRequired(true);
     // Set command-line options.
     final Options options = new Options();
     options.addOptionGroup(modes);
+    options.addOption(models);
     // Try to run the application.
     try {
       // Print masthead to standard output.
@@ -396,9 +441,9 @@ final class RiskPredictor {
         // If in "h" mode, print usage message to standard output.
         printHelp(options, stdOutPw);
         break;
-      case "m":
+      case "l":
         /*
-         * If in "m" mode, load available risk models and print information to
+         * If in "l" mode, load available risk models and print information to
          * standard output.
          */
         riskModelMap = loadRiskModels();
@@ -410,10 +455,19 @@ final class RiskPredictor {
          * standard output, and produce output files containing risk predictions
          * for individuals in input genotype files under each risk model.
          */
-        riskModelMap = loadRiskModels();
-        printRiskModels(riskModelMap, stdOutPw);
-        outputRiskPredictions(riskModelMap, cmd.getOptionValue("predict"),
-          stdOutPw);
+    	riskModelMap = loadRiskModels();  
+    	
+    	// If in 'l' mode, load a specific modelID
+    	String modelID = cmd.getOptionValue("modelID", "");
+    	if (riskModelMap.containsKey(modelID)){
+    		outputRiskPredictions(loadRiskModel(modelID), cmd.getOptionValue("predict"), stdOutPw);
+    	} else {
+       	  	// If not, load all models
+            printRiskModels(riskModelMap, stdOutPw);
+            outputRiskPredictions(riskModelMap, cmd.getOptionValue("predict"),
+              stdOutPw);    		
+    	}
+
         break;
       }
     } catch (ParseException e) {

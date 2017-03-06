@@ -1,5 +1,5 @@
 /*
- * This source file is part of the BRCA Risk Modifiers software package.
+ * This source file is part of the PRISM software package.
  * 
  * Copyright 2014 The Ohio State University Wexner Medical Center
  * 
@@ -16,7 +16,7 @@
  * the License.
  */
 
-package edu.osumc.brcariskmod;
+package edu.osumc.PRISM;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -224,7 +224,7 @@ final class RiskModelBuilder {
           if (linesRead == 0) {
             // If first line, check that file column headers are correct.
             List<String> expColHeaderList =
-              Arrays.asList("BRCAType", "cancerType", "rsID", "sourcePub",
+              Arrays.asList("modelName", "cancerType", "rsID", "sourcePub",
                 "allele1", "allele2", "orientRs", "allele2Freq", "allele2lnHR");
             for (String expColHeader : expColHeaderList) {
               if (!expColHeader.equals(lineScanner.next())) {
@@ -234,8 +234,8 @@ final class RiskModelBuilder {
             }
           } else {
             // Otherwise, read SNP data.
-            final short brcaType = lineScanner.nextShort();
-            final String cancerType = lineScanner.next();
+            final short modelName = lineScanner.nextShort();
+            final String modelSubType = lineScanner.next();
             final String rsID = lineScanner.next();
             final String sourcePub = lineScanner.next();
             final String allele1 = lineScanner.next();
@@ -246,7 +246,7 @@ final class RiskModelBuilder {
             final double allele2lnHR = lineScanner.nextDouble();
             // Create modelID.
             final String modelID =
-              "brca" + brcaType + cancerType.toLowerCase(Locale.US);
+              modelName + "-" + modelSubType.toLowerCase(Locale.US);
             /*
              * Check that string input is parsed properly (alleles are checked
              * by the SNP constructor).
@@ -262,8 +262,8 @@ final class RiskModelBuilder {
             }
             // If new modelID, construct map entry.
             if (!modelRawDataMap.containsKey(modelID)) {
-              modelRawDataMap.put(modelID, new RiskModelRawData("BRCA " +
-                brcaType + " " + cancerType + " Cancer"));
+              modelRawDataMap.put(modelID, new RiskModelRawData(modelName + " " 
+            		  + modelSubType + " Cancer"));
             }
             // Add SNP to RiskModelRawData object for modelID.
             modelRawDataMap.get(modelID).addSNP(
@@ -307,13 +307,13 @@ final class RiskModelBuilder {
             }
           } else {
             // Otherwise, read annual incidence data.
-            final short brcaType = lineScanner.nextShort();
-            final String cancerType = lineScanner.next();
+            final short modelName = lineScanner.nextShort();
+            final String modelSubType = lineScanner.next();
             int ageYrs = lineScanner.nextInt();
             double annInc = lineScanner.nextDouble();
             // Get modelID.
             final String modelID =
-              "brca" + brcaType + cancerType.toLowerCase(Locale.US);
+              modelName + modelSubType.toLowerCase(Locale.US);
             /*
              * If the model ID for the current line corresponds to a model for
              * which we have SNPs, then process the current line.

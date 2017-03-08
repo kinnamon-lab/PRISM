@@ -225,7 +225,7 @@ final class RiskModelBuilder {
             // If first line, check that file column headers are correct.
             List<String> expColHeaderList =
               Arrays.asList("BRCAType", "cancerType", "rsID", "sourcePub",
-                "allele1", "allele2", "orientRs", "allele2Freq", "allele2HR");
+                "allele1", "allele2", "orientRs", "allele2Freq", "allele2lnHR");
             for (String expColHeader : expColHeaderList) {
               if (!expColHeader.equals(lineScanner.next())) {
                 throw new IOException("Model SNPs file column headers "
@@ -243,7 +243,7 @@ final class RiskModelBuilder {
             final String orientRsStr =
               lineScanner.next().toUpperCase(Locale.US);
             final double allele2Freq = lineScanner.nextDouble();
-            final double allele2lnHR = FastMath.log(lineScanner.nextDouble());
+            final double allele2lnHR = lineScanner.nextDouble();
             // Create modelID.
             final String modelID =
               "brca" + brcaType + cancerType.toLowerCase(Locale.US);

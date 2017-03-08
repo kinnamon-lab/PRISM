@@ -5,3 +5,4 @@
 
 # Ignore Maven release.properties file
 release.properties
+/target

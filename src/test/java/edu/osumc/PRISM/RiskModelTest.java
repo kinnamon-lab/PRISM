@@ -39,9 +39,9 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
-import edu.osumc.PRISM.Individual;
-import edu.osumc.PRISM.RiskModel;
-import edu.osumc.PRISM.SNP;
+import edu.osumc.prism.Individual;
+import edu.osumc.prism.RiskModel;
+import edu.osumc.prism.SNP;
 
 /**
  * JUnit test class for {@code RiskModel} class.

@@ -16,7 +16,7 @@
  * the License.
  */
 
-package edu.osumc.PRISM;
+package edu.osumc.prism;
 
 import java.io.Serializable;
 import java.util.Locale;

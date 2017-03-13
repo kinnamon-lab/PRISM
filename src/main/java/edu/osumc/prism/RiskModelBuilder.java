@@ -16,11 +16,13 @@
  * the License.
  */
 
-package edu.osumc.PRISM;
+package edu.osumc.prism;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,6 +35,12 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Scanner;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.OptionGroup;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.PosixParser;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.math3.util.FastMath;
 import org.apache.commons.math3.util.Precision;
@@ -50,6 +58,41 @@ import org.apache.commons.math3.util.Precision;
  * @since 2014-10-30
  */
 final class RiskModelBuilder {
+	
+  /**
+   * Prints a command-line help message to a {@code PrintWriter}.
+   * 
+   * @param options {@link Options} object containing possible options for the
+   *          command line
+   * @param pw {@code PrintWriter} for output
+   */
+  private static final void printHelp(final Options options,
+    final PrintWriter pw) {
+    final String version =
+      Package.getPackage("edu.osumc.prismriskmod").getImplementationVersion();
+    new HelpFormatter().printHelp(pw, HelpFormatter.DEFAULT_WIDTH,
+      "java -jar prismriskmod-" + version + ".jar", "", options,
+      HelpFormatter.DEFAULT_LEFT_PAD, HelpFormatter.DEFAULT_DESC_PAD, "", true);
+  }
+  
+  /**
+   * Prints the arguments with which the program was invoked to a
+   * {@code PrintWriter}.
+   * 
+   * @param cmd {@link CommandLine} object containing parsed command line
+   * @param pw {@code PrintWriter} for output
+   */
+  private static final void printArgs(final CommandLine cmd,
+    final PrintWriter pw) {
+    pw.println();
+    pw.println("Invoked with arguments:");
+    for (Option option : cmd.getOptions()) {
+      pw.println(HelpFormatter.DEFAULT_LONG_OPT_PREFIX + option.getLongOpt() +
+        (option.hasArg() ? " " + option.getValue() : ""));
+    }
+    pw.println();
+  }
+  
 
   /** Holds raw data obtained from input files. */
   private static final class RiskModelRawData {
@@ -197,19 +240,21 @@ final class RiskModelBuilder {
    * linking {@code String} model ID keys to {@code RiskModelRawData} values
    * that can be used to build a {@link RiskModel} object.
    * 
-   * @param modelSNPsFile {@code String} path to properly formatted model SNPs
-   *          file
-   * @param annIncFile {@code String} path to properly formatted annual
-   *          incidence file
+   * @param targetModelID {@code String} Specific modelID to build, or left blank
+   * 		to build all models present in the source directory
+   * @param sourceDirectory {@code String} path to directory containing all 
+   * 		properly formatted SNP and Annual Incidence files, or the files 
+   * 		belonging to the specified targetModelID
    */
   private static final HashMap<String, RiskModelRawData> parseInputFiles(
-    final String modelSNPsFile, final String annIncFile) throws IOException {
+    final String targetModelID, final String sourceDirectory) throws IOException {
+	// Try to run the application.
     HashMap<String, RiskModelRawData> modelRawDataMap =
       new HashMap<String, RiskModelRawData>();
     // Parse model SNPs file.
     try (
       BufferedReader fileReader =
-        Files.newBufferedReader(Paths.get(modelSNPsFile),
+        Files.newBufferedReader(Paths.get(targetModelID),
           StandardCharsets.UTF_8)) {
       String line;
       int linesRead = 0;
@@ -235,7 +280,6 @@ final class RiskModelBuilder {
           } else {
             // Otherwise, read SNP data.
             final String modelID = lineScanner.next();
-            final String modelSubType = lineScanner.next();
             final String rsID = lineScanner.next();
             final String sourcePub = lineScanner.next();
             final String allele1 = lineScanner.next();
@@ -251,8 +295,7 @@ final class RiskModelBuilder {
             }
             // If new modelID, construct map entry.
             if (!modelRawDataMap.containsKey(modelID)) {
-              modelRawDataMap.put(modelID, new RiskModelRawData(modelID + " " 
-            		  + modelSubType + " Cancer"));
+              modelRawDataMap.put(modelID, new RiskModelRawData(modelID));
             }
             // Add SNP to RiskModelRawData object for modelID.
             modelRawDataMap.get(modelID).addSNP(
@@ -273,7 +316,7 @@ final class RiskModelBuilder {
     // Parse annual Incidence file.
     try (
       BufferedReader fileReader =
-        Files.newBufferedReader(Paths.get(annIncFile), StandardCharsets.UTF_8)) {
+        Files.newBufferedReader(Paths.get(sourceDirectory), StandardCharsets.UTF_8)) {
       String line;
       int linesRead = 0;
       // Read lines from file...
@@ -378,17 +421,91 @@ final class RiskModelBuilder {
    *          (*.rmo files) should be saved.
    */
   public static void main(String[] args) {
-    // Set exit code to 0 (success).
+	// Set exit code to 0 (success).
     int exitCode = 0;
-    // Parse arguments.
-    final String modelSNPsFile = args[0];
-    final String annIncFile = args[1];
-    final String savePath = args[2];
-    // Try parsing input files and building RiskModel objects.
+    
+    /*
+     * Wrap standard output in PrintWriter (necessary for some Apache Commons
+     * CLI methods).
+     */
+    final PrintWriter stdOutPw =
+      new PrintWriter(
+        new OutputStreamWriter(System.out, StandardCharsets.UTF_8), true);
+    
+    // Define command line options.
+    final Option help =
+      new Option("h", "help", false, "Print this usage information.");
+    final Option build =
+      new Option("b", "buildModel", true,
+        "Generate new risk predictions model using the supplied annual incidences "
+        + "and risk allele hazard ratios in given by <modelID>_annInc.dat / "
+        + "<modelID>_SNPs.dat. If this argument is set but left blank, the Builder"
+        + " will attempt to build all available models in the specified directory "
+        + "<sourceDir> as risk model objects (<modelID>.rmo) in the output "
+        + "directory (<saveDir>).");
+    build.setArgName("<modelID>");
+    
+    final Option sources= new Option("s", "sourceDir", true, "Set the directory in "
+    		+ "which the builder will look for model source files (<SourceDir>). If "
+    		+ "left unset, the builder will look in the directory containing itself.");
+    sources.setArgName("<sourceDir>");
+    
+    final Option destination = new Option("d", "destinationDir", true, "Set the"
+    		+ " directory in which the output model will be saved. If left "
+    		+ "unset, the builder will save the model in the directory "
+    		+ "containing itself.");
+    destination.setArgName("<saveDir>");
+    
+    
+    /*
+     * Make options a mutually exclusive group so only one can be selected at a
+     * time. Make the group required so that at least one of these options must
+     * be selected.
+     */
+    final OptionGroup modes = new OptionGroup();
+    modes.addOption(help);
+    modes.addOption(build);
+    modes.setRequired(true);
+    // Set command-line options.
+    final Options options = new Options();
+    options.addOptionGroup(modes);
+    options.addOption(sources);
+    options.addOption(destination);
+    
     try {
-      HashMap<String, RiskModelRawData> modelRawDataMap =
-        parseInputFiles(modelSNPsFile, annIncFile);
-      buildRiskModels(savePath, modelRawDataMap);
+    	// Parse command line and echo arguments to standard output.
+        final CommandLine cmd = new PosixParser().parse(options, args);
+        printArgs(cmd, stdOutPw);
+        
+        switch (modes.getSelected()) {
+        case "h":
+          // If in "h" mode, print usage message to standard output.
+          printHelp(options, stdOutPw);
+          break;
+        case "b":
+          /*
+           * If in "b" mode, build specified risk models, and produce output 
+           * files containing the saved models to the specified directory
+           */
+        	String buildID = cmd.getOptionValue("buildID", "");
+        	String sourceDir = cmd.getOptionValue("","");
+        	String outputDir = cmd.getOptionValue("", "");
+
+    	    // Parse arguments.
+    	    final String modelSNPsFile = args[0];
+    	    final String annIncFile = args[1];
+    	    final String savePath = args[2];
+    	    // Try parsing input files and building RiskModel objects.
+
+			HashMap<String, RiskModelRawData> modelRawDataMap =
+			  parseInputFiles(buildID, sourceDir);
+			buildRiskModels(outputDir, modelRawDataMap);
+
+        	break;
+        }
+
+    
+
     } catch (Exception e) {
       /*
        * If any exception is thrown during the process, a message will be

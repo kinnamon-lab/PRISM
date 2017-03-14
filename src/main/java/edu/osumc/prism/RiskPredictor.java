@@ -47,6 +47,8 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.text.WordUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Command-line interface for obtaining risk predictions from the PRISM
@@ -62,6 +64,9 @@ import org.apache.commons.lang3.text.WordUtils;
  */
 final class RiskPredictor {
 
+  //Initialize logger
+  private static final Logger LOGGER = LogManager.getLogger();
+  
   /** Prevents construction of {@code RiskPredictor} class instances. */
   private RiskPredictor() {
   }
@@ -73,7 +78,7 @@ final class RiskPredictor {
    */
   private static final void printMasthead(final PrintWriter pw) {
     final String version =
-      Package.getPackage("edu.osumc.prismriskmod").getImplementationVersion();
+      Package.getPackage("edu.osumc.prism").getImplementationVersion();
     pw.println(StringUtils.repeat("=", 79));
     pw.println(StringUtils.center("PRISM - Polygenic Risk Score Models", 79));
     pw.println(StringUtils.center("* Version " + version + " *", 79));
@@ -98,9 +103,9 @@ final class RiskPredictor {
   private static final void printHelp(final Options options,
     final PrintWriter pw) {
     final String version =
-      Package.getPackage("edu.osumc.prismriskmod").getImplementationVersion();
+      Package.getPackage("edu.osumc.prism").getImplementationVersion();
     new HelpFormatter().printHelp(pw, HelpFormatter.DEFAULT_WIDTH,
-      "java -jar prismriskmod-" + version + ".jar", "", options,
+      "java -jar prism-" + version + ".jar", "", options,
       HelpFormatter.DEFAULT_LEFT_PAD, HelpFormatter.DEFAULT_DESC_PAD, "", true);
   }
   
@@ -396,6 +401,8 @@ final class RiskPredictor {
     final PrintWriter stdOutPw =
       new PrintWriter(
         new OutputStreamWriter(System.out, StandardCharsets.UTF_8), true);
+    
+    LOGGER.debug("Before declaring options...");
     // Define command line options.
     final Option help =
       new Option("h", "help", false, "Print this usage information.");
@@ -403,16 +410,32 @@ final class RiskPredictor {
       new Option("l", "list_models", false, "Print available risk model "
         + "information to console.");
     final Option predict =
-      new Option("p", "predict", true,
+      new Option("p", "predict", false,
         "Generate risk predictions for individual genotype data supplied "
-          + "in the PED/MAP file pair given by <fileroot>.ped/<fileroot>.map. "
-          + "Predictions will be output to <fileroot>-<modelID>.prd files, "
-          + "one for each risk model, and logging information will be printed "
-          + "to the console.");
-    predict.setArgName("fileroot");
-    final Option models= new Option("m", "modelID", true, "Declare which model "
+          + "in the PED/MAP file pair given by <SourceDir>.ped/<SourceDir>.map. "
+          + "Predictions will be output to <SourceDir>-<modelID>.prd files, "
+          + "one for each risk model specified by <modelID>, located in <ModelSaveDir>"
+          + ", and logging information will be printed to the console.");
+
+    
+    final Option optModelID= new Option("m", "modelID", true, "Declare which model "
     		+ "to use when generating risk predictions. Leave blank to use all "
     		+ "available models.");
+    optModelID.setArgName("modelID");
+
+    final Option sources =
+        new Option("s", "sourceDir", true, "Set the directory in "
+            + "which the predictor will look for input source files (<SourceDir>). If "
+            + "left unset, the builder will look in the directory containing itself.");
+    sources.setArgName("SourceDir");
+
+    final Option destination =
+        new Option("d", "modelSaveDir", true, "Defines the directory in which models "
+            + "created by PRISM are stored. If left unset, PRISM will look for models "
+            + "in the directory containing itself.");
+    destination.setArgName("ModelSaveDir");
+    
+    
     /*
      * Make options a mutually exclusive group so only one can be selected at a
      * time. Make the group required so that at least one of these options must
@@ -426,7 +449,11 @@ final class RiskPredictor {
     // Set command-line options.
     final Options options = new Options();
     options.addOptionGroup(modes);
-    options.addOption(models);
+    options.addOption(optModelID);
+    options.addOption(sources);
+    options.addOption(destination);
+    
+    LOGGER.debug("After declaring options...");
     // Try to run the application.
     try {
       // Print masthead to standard output.
@@ -436,6 +463,8 @@ final class RiskPredictor {
       printArgs(cmd, stdOutPw);
       // Declare LinkedHashMap to load RiskModel objects.
       final LinkedHashMap<String, RiskModel> riskModelMap;
+      
+      LOGGER.debug("Parsing options for reals");
       switch (modes.getSelected()) {
       case "h":
         // If in "h" mode, print usage message to standard output.
@@ -471,6 +500,7 @@ final class RiskPredictor {
         break;
       }
     } catch (ParseException e) {
+      LOGGER.error("Parse exception!");
       /*
        * If a ParseException is thrown to indicate a problem with the command
        * line, print the ParseException message and the usage message and set
@@ -482,6 +512,8 @@ final class RiskPredictor {
       printHelp(options, stdOutPw);
       exitCode = 1;
     } catch (Exception e) {
+    	LOGGER.error("Not a parse exception!");
+    	LOGGER.error("Exception thrown. Details:", e);
       /*
        * For all other exceptions, print the exception string and set the exit
        * code to 1 (failure).

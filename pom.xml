@@ -48,6 +48,16 @@ the License.
       <version>4.11</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+	    <groupId>org.apache.logging.log4j</groupId>
+	    <artifactId>log4j-api</artifactId>
+	    <version>2.8.1</version>
+  	</dependency>
+  	<dependency>
+	  <groupId>org.apache.logging.log4j</groupId>
+	  <artifactId>log4j-core</artifactId>
+	  <version>2.8.1</version>
+	</dependency>
   </dependencies>
 
   <!-- Set encoding for all source/resources files to UTF-8 to avoid 
@@ -106,23 +116,15 @@ the License.
         <configuration>
           <createDependencyReducedPom>false</createDependencyReducedPom>
           <createSourcesJar>true</createSourcesJar>
+          <minimizeJar>true</minimizeJar>
           <filters>
             <filter>
-              <artifact>edu.osumc:prism</artifact>
-              <excludes>
-                <exclude>edu/osumc/prism/RiskModelBuilder*</exclude>
-              </excludes>
+              <artifact>org.apache.logging.log4j</artifact>
+              <includes>
+                <include>**</include>
+              </includes>
             </filter>
           </filters>
-          <minimizeJar>true</minimizeJar>
-          <transformers>
-            <transformer implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
-              <resources>
-                <resource>.dat</resource>
-                <resource>.prn</resource>
-              </resources>
-            </transformer>
-          </transformers>
         </configuration>
         <executions>
           <execution>
@@ -222,10 +224,31 @@ the License.
   <profiles>
     <!-- Profile to skip compiling and running JUnit tests. -->
     <profile>
-      <id>noJUnit</id>
+      <id>development</id>
       <properties>
         <maven.test.skip>true</maven.test.skip>
       </properties>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <build>
+        <resources>
+          <resource>
+            <directory>${project.basedir}/src/main/resources/dev</directory>
+          </resource>
+        </resources>
+      </build>
+    </profile>
+    <!-- Production build profile -->
+    <profile>
+      <id>production</id>
+      <build>
+        <resources>
+          <resource>
+            <directory>${project.basedir}/src/main/resources/prod</directory>
+          </resource>
+        </resources>
+      </build>
     </profile>
   </profiles>
   

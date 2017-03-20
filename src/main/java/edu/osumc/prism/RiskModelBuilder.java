@@ -472,13 +472,13 @@ final class RiskModelBuilder {
     optModelID.setArgName("modelID");
 
     final Option sources =
-        new Option("s", "sourceDir", true, "Set the directory in "
+        new Option("s", "SourceDirectory", true, "Set the directory in "
             + "which the builder will look for model source files (<SourceDir>). If "
             + "left unset, the builder will look in the directory containing itself.");
     sources.setArgName("sourceDir");
 
     final Option destination =
-        new Option("d", "destinationDir", true, "Set the"
+        new Option("d", "DestinationDirectory", true, "Set the"
             + " directory in which the output model will be saved. If left "
             + "unset, the builder will save the model in the directory " + "containing itself.");
     destination.setArgName("saveDir");

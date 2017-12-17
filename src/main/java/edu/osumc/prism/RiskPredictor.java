@@ -1,13 +1,13 @@
 /*
  * This source file is part of the PRISM software package.
- * 
- * Copyright 2014 The Ohio State University Wexner Medical Center
- * 
+ *
+ * Copyright 2014-2017 The Ohio State University Wexner Medical Center
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
  * or implied. See the License for the specific language governing permissions and limitations under
@@ -35,14 +35,13 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Scanner;
+
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionGroup;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.text.WordUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -52,10 +51,6 @@ import org.apache.logging.log4j.Logger;
  * <p>
  * This package-private class contains several private static methods and a {@code main} method to
  * provide an application entry point in the package JAR file.
- * 
- * @author Daniel Kinnamon
- * @version 2014-10-30
- * @since 2014-10-30
  */
 final class RiskPredictor {
 
@@ -66,45 +61,13 @@ final class RiskPredictor {
   private RiskPredictor() {}
 
   /**
-   * Prints program masthead to a {@code PrintWriter}.
-   * 
-   * @param pw {@code PrintWriter} for output
-   */
-  private static final void printMasthead(final PrintWriter pw) {
-    final String version = Package.getPackage("edu.osumc.prism").getImplementationVersion();
-    pw.println(StringUtils.repeat("=", 79));
-    pw.println(StringUtils.center("PRISM - Polygenic Risk Score Models", 79));
-    pw.println(StringUtils.center("* Version " + version + " *", 79));
-    pw.println(StringUtils.center("-- Copyright 2014 The Ohio State "
-        + "University Wexner Medical Center --", 79));
-    pw.println(StringUtils.center("Licensed under the Apache " + "License, Version 2.0", 79));
-    pw.println(StringUtils.repeat("=", 79));
-    pw.println(WordUtils.wrap("NOTE: This software is distributed on "
-        + "an \"AS IS\" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, "
-        + "either express or implied.", 79));
-    pw.println(StringUtils.repeat("-", 79));
-  }
-
-  /**
-   * Prints a command-line help message to a {@code PrintWriter}.
-   * 
-   * @param options {@link Options} object containing possible options for the command line
-   * @param pw {@code PrintWriter} for output
-   */
-  private static final void printHelp(final Options options, final PrintWriter pw) {
-    final String version = Package.getPackage("edu.osumc.prism").getImplementationVersion();
-    new HelpFormatter().printHelp(pw, HelpFormatter.DEFAULT_WIDTH, "java -jar prism-" + version
-        + ".jar", "", options, HelpFormatter.DEFAULT_LEFT_PAD, HelpFormatter.DEFAULT_DESC_PAD, "",
-        true);
-  }
-
-  /**
    * Constructs a {@link DirectoryStream.Filter<Path>} object for use in creating a new directory
    * stream containing only SNP files.
    */
   private static final DirectoryStream.Filter<Path> filterRMOs =
       new DirectoryStream.Filter<Path>() {
-        public boolean accept(Path file) throws IOException {
+        @Override
+        public boolean accept(final Path file) throws IOException {
           return (file.getFileName().toString().endsWith(".rmo"));
         }
       };
@@ -113,12 +76,12 @@ final class RiskPredictor {
    * Searches the {@link RiskModel} objects (*.rmo files) contained in the modelDirectory for
    * targetModelID and returns a {@code LinkedHashMap} of the model identified by its modelID.
    */
-  private static final LinkedHashMap<String, RiskModel> loadRiskModel(String modelDirectory,
-      String targetModelID) throws URISyntaxException, IOException, ClassNotFoundException {
+  private static final LinkedHashMap<String, RiskModel> loadRiskModel(final String modelDirectory,
+      final String targetModelID) throws URISyntaxException, IOException, ClassNotFoundException {
     final LinkedHashMap<String, RiskModel> riskModelMap = new LinkedHashMap<String, RiskModel>();
 
     LOGGER.debug("Attempting to load file at: " + modelDirectory + targetModelID + ".rmo");
-    Path modelPath = Paths.get(modelDirectory, targetModelID + ".rmo");
+    final Path modelPath = Paths.get(modelDirectory, targetModelID + ".rmo");
     try (InputStream modelStream = Files.newInputStream(modelPath)) {
       try (ObjectInputStream riskModelObjInStream = new ObjectInputStream(modelStream)) {
         /*
@@ -128,27 +91,27 @@ final class RiskPredictor {
         LOGGER.debug(targetModelID + " model successfully loaded");
       } // ObjectInputStream automatically closed here.
     }
-    if (riskModelMap.isEmpty()){
-      throw new NoSuchFileException(targetModelID+".rmo not found in " + Paths.get(modelDirectory).toString());
+    if (riskModelMap.isEmpty()) {
+      throw new NoSuchFileException(
+          targetModelID + ".rmo not found in " + Paths.get(modelDirectory).toString());
     }
     return riskModelMap;
   }
 
   /**
-   * Loads all {@link RiskModel} objects (*.rmo files) contained in the /riskmodels resource of the
-   * package JAR file and returns a {@code LinkedHashMap} of these objects identified by filename
-   * root/modelID keys.
+   * Loads all {@link RiskModel} objects (*.rmo files) contained in the modelDirectory and returns a
+   * {@code LinkedHashMap} of these objects identified by filename root/modelID keys.
    */
-  private static final LinkedHashMap<String, RiskModel> loadRiskModels(String modelDirectory)
+  private static final LinkedHashMap<String, RiskModel> loadRiskModels(final String modelDirectory)
       throws URISyntaxException, IOException, ClassNotFoundException {
     final LinkedHashMap<String, RiskModel> riskModelMap = new LinkedHashMap<String, RiskModel>();
     // Build list of paths to Risk Model Objects and then load them into
     // the riskModelMap
     try (DirectoryStream<Path> modelsFolder =
         Files.newDirectoryStream(Paths.get(modelDirectory), filterRMOs)) {
-      LOGGER.debug("Directory stream for .rmo files open..");
+      LOGGER.debug("Directory stream for .rmo files open.");
 
-      for (Path modelPath : modelsFolder) {
+      for (final Path modelPath : modelsFolder) {
         LOGGER.debug("Now looking at " + modelPath.getFileName().toString());
         // Slightly redundant due to filter, but better safe than sorry
         if (modelPath.getFileName().toString().endsWith(".rmo")) {
@@ -168,31 +131,16 @@ final class RiskPredictor {
       }
     } // DirectoryStream automatically closed here.
 
-    if (riskModelMap.isEmpty()){
-      throw new NoSuchFileException("No .rmo files found in " + Paths.get(modelDirectory).toString());
+    if (riskModelMap.isEmpty()) {
+      throw new NoSuchFileException(
+          "No .rmo files found in " + Paths.get(modelDirectory).toString());
     }
     return riskModelMap;
   }
 
   /**
-   * Prints the arguments with which the program was invoked to a {@code PrintWriter}.
-   * 
-   * @param cmd {@link CommandLine} object containing parsed command line
-   * @param pw {@code PrintWriter} for output
-   */
-  private static final void printArgs(final CommandLine cmd, final PrintWriter pw) {
-    pw.println();
-    pw.println("Invoked with arguments:");
-    for (Option option : cmd.getOptions()) {
-      pw.println(HelpFormatter.DEFAULT_LONG_OPT_PREFIX + option.getLongOpt()
-          + (option.hasArg() ? " " + option.getValue() : ""));
-    }
-    pw.println();
-  }
-
-  /**
    * Prints loaded {@link RiskModel} information to a {@code PrintWriter}.
-   * 
+   *
    * @param riskModelMap {@code LinkedHashMap<String, RiskModel>} containing modelID-RiskModel
    *        key-value pairs
    * @param pw {@code PrintWriter} for output
@@ -200,7 +148,7 @@ final class RiskPredictor {
   private static final void printRiskModels(final LinkedHashMap<String, RiskModel> riskModelMap,
       final PrintWriter pw) {
     pw.println();
-    for (RiskModel riskModel : riskModelMap.values()) {
+    for (final RiskModel riskModel : riskModelMap.values()) {
       riskModel.print(pw);
       pw.println();
     }
@@ -209,7 +157,7 @@ final class RiskPredictor {
   /**
    * Reads individual genotypes from a PED/MAP file pair and outputs individual risk predictions
    * from each loaded {@link RiskModel} object to a separate file, logging the process.
-   * 
+   *
    * @param riskModelMap {@code LinkedHashMap<String, RiskModel>} containing modelID-RiskModel
    *        key-value pairs
    * @param genoFilesRoot {@code String} root path to PED/MAP file pair (i.e., without file
@@ -239,8 +187,7 @@ final class RiskPredictor {
           orientRsMap.put(rsID, orientRsStr);
           // Check that there are no input tokens other than the ones expected.
           if (lineScanner.hasNext()) {
-            throw new IOException("Input tokens available past expected "
-                + "end of line in MAP file.");
+            throw new IOException("Input tokens available past expected end of line in MAP file.");
           }
         } // Scanner automatically closed here.
       }
@@ -270,7 +217,7 @@ final class RiskPredictor {
            * rsID keys in orientRsMap and pairs of allele columns in the PED file to get the
            * individual's genotype for each rsID key.
            */
-          for (String rsID : orientRsMap.keySet()) {
+          for (final String rsID : orientRsMap.keySet()) {
             /*
              * Get data from next pair of allele columns corresponding to current rsID.
              */
@@ -281,8 +228,7 @@ final class RiskPredictor {
           }
           // Check that there are no input tokens other than the ones expected.
           if (lineScanner.hasNext()) {
-            throw new IOException("Input tokens available past expected "
-                + "end of line in PED file.");
+            throw new IOException("Input tokens available past expected end of line in PED file.");
           }
           // Add individual's Genotype object to the end of the list.
           inputGenoList.add(inputGenos);
@@ -295,13 +241,13 @@ final class RiskPredictor {
      */
 
     pw.println("Outputting risk predictions to: ");
-    for (Map.Entry<String, RiskModel> riskModelEntry : riskModelMap.entrySet()) {
+    for (final Map.Entry<String, RiskModel> riskModelEntry : riskModelMap.entrySet()) {
       final ArrayList<Individual.RiskPrediction> outputRiskPredList =
           new ArrayList<Individual.RiskPrediction>();
       /*
        * Add each individual's risk prediction from the current model to a results ArrayList.
        */
-      for (Individual.Genotypes inputGenos : inputGenoList) {
+      for (final Individual.Genotypes inputGenos : inputGenoList) {
         outputRiskPredList.add(riskModelEntry.getValue().getRiskPrediction(inputGenos));
       }
       /*
@@ -316,7 +262,7 @@ final class RiskPredictor {
           new PrintWriter(Files.newBufferedWriter(modelOutFilePath, StandardCharsets.UTF_8))) {
         // Output file header row.
         outPw.print("IndivID\tModel");
-        for (String rsID : outputRiskPredList.get(0).getUsedGenotypesRsMap().keySet()) {
+        for (final String rsID : outputRiskPredList.get(0).getUsedGenotypesRsMap().keySet()) {
           outPw.print("\t" + rsID);
         }
         outPw.print("\tPI\tPIPctl");
@@ -329,15 +275,15 @@ final class RiskPredictor {
         }
         outPw.println();
         // Output individual risk predictions.
-        for (Individual.RiskPrediction riskPrediction : outputRiskPredList) {
+        for (final Individual.RiskPrediction riskPrediction : outputRiskPredList) {
           outPw.print(riskPrediction.getIndivID());
           outPw.print("\t" + riskPrediction.getModelName());
-          for (String geno : riskPrediction.getUsedGenotypesRsMap().values()) {
+          for (final String geno : riskPrediction.getUsedGenotypesRsMap().values()) {
             outPw.print("\t" + geno);
           }
           outPw.print("\t" + riskPrediction.getPrognosticIndex());
           outPw.print("\t" + riskPrediction.getPrognosticIndexPctl());
-          double[] predCumRisk = riskPrediction.getPredCumRisk();
+          final double[] predCumRisk = riskPrediction.getPredCumRisk();
           for (int ageYrs = 0; ageYrs < predCumRisk.length; ageYrs++) {
             outPw.print("\t" + predCumRisk[ageYrs]);
           }
@@ -351,10 +297,10 @@ final class RiskPredictor {
 
   /**
    * Main method of {@code RiskPredictor} class.
-   * 
+   *
    * @param args {@code String[]} providing required command line arguments
    */
-  public static void main(String[] args) {
+  public static void main(final String[] args) {
     // Set exit code to 0 (success).
     int exitCode = 0;
     /*
@@ -363,39 +309,36 @@ final class RiskPredictor {
     final PrintWriter stdOutPw =
         new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8), true);
 
-    LOGGER.debug("Before declaring options...");
+    LOGGER.debug("Welcome to RiskPredictor.");
+    LOGGER.debug("Now attempting to build options.");
+
     // Define command line options.
-    final Option help = new Option("h", "help", false, "Print this usage information.");
-    final Option listModels =
-        new Option("l", "list_models", false, "Print available risk model "
-            + "information to console.");
-    final Option predict =
-        new Option("p", "predict", false,
-            "Generate risk predictions for individual genotype data supplied "
-                + "in the PED/MAP file pair given by <InputBase>.ped/<InputBase>.map. "
-                + "Predictions will be output to <InputBase>-<modelID>.prd files, "
-                + "one for each risk model specified by <modelID>, located in <ModelSaveDir>"
-                + ", and logging information will be printed to the console.");
+    final Option help = new Option("h", "help", false, "Print this usage information and exit.");
+    final Option listModels = new Option("l", "list_models", false,
+        "Print available risk model " + "information to console.");
+    final Option predict = new Option("p", "predict", false,
+        "Generate risk predictions for individual genotype data supplied "
+            + "in the PED/MAP file pair given by <InputBase>.ped/<InputBase>.map. "
+            + "Predictions will be output to <InputBase>-<modelID>.prd files, "
+            + "one for each risk model specified by <modelID> located in <ModelSaveDir>"
+            + "and logging information will be printed to the console.");
 
 
-    final Option optModelID =
-        new Option("m", "modelID", true, "Declare which model "
-            + "to use when generating risk predictions. Leave blank to use all "
-            + "available models.");
+    final Option optModelID = new Option("m", "model_id", true,
+        "Declare which model to use for generating risk predictions. Leave blank to use all "
+            + "available models in <ModelSaveDir>.");
     optModelID.setArgName("modelID");
 
-    final Option sources =
-        new Option("s", "InputBase", true, "Set the base filepath that the predictor "
-            + "will attempt to load the input .map and .ped file. (e.g. if you have "
-            + "test.map and test.ped, you would provide '/home/user/you/projectfolder/test'."
-            + "If left unset, the builder will look in the directory containing itself "
-            + "and for files that begin with 'subjects_genotypes'.");
+    final Option sources = new Option("s", "input_base", true,
+        "Sets <InputBase> described in the --predict option. "
+            + "If left unset, the builder will look in the current working directory "
+            + "for a PED/MAP pair named subjects_genotypes.ped/subjects_genotypes.map.");
     sources.setArgName("InputBase");
 
-    final Option destination =
-        new Option("d", "ModelDirectory", true, "Defines the directory in which models "
-            + "created by PRISM are stored. If left unset, PRISM will look for models "
-            + "in the directory containing itself.");
+    final Option destination = new Option("d", "model_dir", true,
+        "Defines the directory in which risk model objects created by previous runs of PRISM "
+            + "RiskModelBuilder are stored. If left unset, PRISM will look for risk model objects "
+            + "in the current working directory.");
     destination.setArgName("ModelSaveDir");
 
 
@@ -421,28 +364,16 @@ final class RiskPredictor {
     // Try to run the application.
     try {
       // Print masthead to standard output.
-      printMasthead(stdOutPw);
+      Util.printMasthead(RiskPredictor.class.getSimpleName(), stdOutPw);
       // Parse command line and echo arguments to standard output.
       final CommandLine cmd = new PosixParser().parse(options, args);
-      printArgs(cmd, stdOutPw);
+      Util.printArgs(cmd, stdOutPw);
       // Declare LinkedHashMap to load RiskModel objects.
       final LinkedHashMap<String, RiskModel> riskModelMap;
 
-      // Prepare information regarding the jar in case any of the directory
-      // fields are left blank
-
-      // Get JarFile object for JAR file containing the current class.
-      Path jarPath =
-          Paths.get(
-              ((JarURLConnection) (RiskPredictor.class).getResource("RiskPredictor.class")
-                  .openConnection()).getJarFileURL().getPath()).getParent();
-
-
-      String modelID = cmd.getOptionValue("modelID", "");
-      String inputBase =
-          cmd.getOptionValue("InputBase", Paths.get(jarPath.toString(), "subjects_genotypes")
-              .toString());
-      String modelDir = cmd.getOptionValue("ModelDirectory", jarPath.toString());
+      final String modelID = cmd.getOptionValue("model_id", "");
+      final String inputBase = cmd.getOptionValue("input_base", "subjects_genotypes");
+      final String modelDir = cmd.getOptionValue("model_dir", System.getProperty("user.dir"));
 
       LOGGER.debug("Confirming, read modelID: " + modelID);
       LOGGER.debug("Confirming, read SourceDir: " + inputBase);
@@ -451,7 +382,7 @@ final class RiskPredictor {
       switch (modes.getSelected()) {
         case "h":
           // If in "h" mode, print usage message to standard output.
-          printHelp(options, stdOutPw);
+          Util.printHelp(options, RiskPredictor.class.getSimpleName(), stdOutPw);
           break;
         case "l":
           /*
@@ -480,7 +411,7 @@ final class RiskPredictor {
 
           break;
       }
-    } catch (ParseException e) {
+    } catch (final ParseException e) {
       LOGGER.error("Parse exception!");
       /*
        * If a ParseException is thrown to indicate a problem with the command line, print the
@@ -489,15 +420,15 @@ final class RiskPredictor {
       stdOutPw.println();
       stdOutPw.println(WordUtils.wrap(e.getMessage(), 80));
       stdOutPw.println();
-      printHelp(options, stdOutPw);
+      Util.printHelp(options, RiskPredictor.class.getSimpleName(), stdOutPw);
       exitCode = 1;
-    } catch (NoSuchFileException e) {
+    } catch (final NoSuchFileException e) {
       stdOutPw.println("ERROR! File not found!");
-      stdOutPw
-          .println("The following file could not be found. Please check your command and try again.");
+      stdOutPw.println(
+          "The following file could not be found. Please check your command and try again.");
       stdOutPw.println(WordUtils.wrap(e.getMessage(), 80));
-      System.exit(1);
-    } catch (Exception e) {
+      exitCode = 1;
+    } catch (final Exception e) {
       LOGGER.error("Not a parse exception!");
       LOGGER.error("Exception thrown. Details:", e);
       /*

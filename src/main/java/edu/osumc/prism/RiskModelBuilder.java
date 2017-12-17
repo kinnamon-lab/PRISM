@@ -1,13 +1,13 @@
 /*
  * This source file is part of the PRISM software package.
- * 
- * Copyright 2014 The Ohio State University Wexner Medical Center
- * 
+ *
+ * Copyright 2014-2017 The Ohio State University Wexner Medical Center
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed under the License
  * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
  * or implied. See the License for the specific language governing permissions and limitations under
@@ -24,6 +24,7 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -35,62 +36,27 @@ import java.util.Map;
 import java.util.Scanner;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
-import org.apache.commons.cli.OptionGroup;
 import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.text.WordUtils;
 import org.apache.commons.math3.util.FastMath;
 import org.apache.commons.math3.util.Precision;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
- * Constructs and serializes {@link RiskModel} objects during the build process.
+ * Constructs and serializes {@link RiskModel} objects.
  * <p>
  * This package-private class contains a private nested helper class, several private static
- * methods, and a {@code main} method called during the build process. Because it is used only in
- * the build process, it is neither part of the package API nor included in the final artifact.
- * 
- * @author Daniel Kinnamon
- * @version 2014-10-31
- * @since 2014-10-30
+ * methods, and a {@code main} method for building serialized risk model objects.
  */
 final class RiskModelBuilder {
 
   // Initialize logger
   private static final Logger LOGGER = LogManager.getLogger();
-
-  /**
-   * Prints a command-line help message to a {@code PrintWriter}.
-   * 
-   * @param options {@link Options} object containing possible options for the command line
-   * @param pw {@code PrintWriter} for output
-   */
-  private static final void printHelp(final Options options, final PrintWriter pw) {
-    final String version = Package.getPackage("edu.osumc.prism").getImplementationVersion();
-    new HelpFormatter().printHelp(pw, HelpFormatter.DEFAULT_WIDTH, "java -jar prism-" + version
-        + ".jar", "", options, HelpFormatter.DEFAULT_LEFT_PAD, HelpFormatter.DEFAULT_DESC_PAD, "",
-        true);
-  }
-
-  /**
-   * Prints the arguments with which the program was invoked to a {@code PrintWriter}.
-   * 
-   * @param cmd {@link CommandLine} object containing parsed command line
-   * @param pw {@code PrintWriter} for output
-   */
-  private static final void printArgs(final CommandLine cmd, final PrintWriter pw) {
-    pw.println();
-    pw.println("Invoked with arguments:");
-    for (Option option : cmd.getOptions()) {
-      pw.println(HelpFormatter.DEFAULT_LONG_OPT_PREFIX + option.getLongOpt()
-          + (option.hasArg() ? " " + option.getValue() : ""));
-    }
-    pw.println();
-  }
-
 
   /** Holds raw data obtained from input files. */
   private static final class RiskModelRawData {
@@ -111,7 +77,7 @@ final class RiskModelBuilder {
 
     /**
      * Constructs a {@code RiskModelRawData} object ready to receive data.
-     * 
+     *
      * @param modelID {@code String} risk model name
      */
     private RiskModelRawData(final String modelID) {
@@ -135,7 +101,7 @@ final class RiskModelBuilder {
      * member. Performs checks to make sure that annual incidences for consecutive yearly ages are
      * being added in order and that {@code ageYrsList} and {@code annIncList} are growing at the
      * same rate.
-     * 
+     *
      * @param ageYrs {@code int} age in years
      * @param annInc {@code double} annual incidence in the year preceding {@code ageYrs}
      */
@@ -156,10 +122,11 @@ final class RiskModelBuilder {
       /*
        * Check to make sure that ageYrsList[ageYrs] = ageYrs and annIncList[ageYrs] = annInc.
        */
-      if (ageYrsList.size()-1 < ageYrs || ageYrsList.get(ageYrs) != ageYrs || !Precision.equals(annIncList.get(ageYrs), annInc)) {
-        throw new IllegalArgumentException("Annual incidences for "
-            + "consecutive yearly ages starting at 0 must be supplied in "
-            + "order. Please check the annual incidence input file.");
+      if (ageYrsList.size() - 1 < ageYrs || ageYrsList.get(ageYrs) != ageYrs
+          || !Precision.equals(annIncList.get(ageYrs), annInc)) {
+        throw new IllegalArgumentException(
+            "Annual incidences for " + "consecutive yearly ages starting at 0 must be supplied in "
+                + "order. Please check the annual incidence input file.");
       }
       // Check that lists are growing at the same rate.
       if (ageYrsList.size() != annIncList.size()) {
@@ -191,7 +158,7 @@ final class RiskModelBuilder {
      * {@code getMargSurv()[i]} is the marginal survivor function at {@code getAgeYrs()[i]}.
      */
     private final double[] getMargSurv() {
-      ArrayList<Double> margSurvList = new ArrayList<Double>();
+      final ArrayList<Double> margSurvList = new ArrayList<Double>();
       /*
        * Use the annual incidences to calculate the continuous-time survivor function assuming a
        * piecewise constant yearly hazard (i.e., annual incidence). Because of checks in the
@@ -212,8 +179,8 @@ final class RiskModelBuilder {
          * margSurvList[i].
          */
         if (!Precision.equals(margSurvList.get(i), survI)) {
-          throw new RuntimeException("Problem with calculating survivor "
-              + "function from annual incidences.");
+          throw new RuntimeException(
+              "Problem with calculating survivor function from annual incidences.");
         }
       }
       return ArrayUtils.toPrimitive(margSurvList.toArray(new Double[0]));
@@ -229,7 +196,8 @@ final class RiskModelBuilder {
    */
   private static final DirectoryStream.Filter<Path> filterSNPs =
       new DirectoryStream.Filter<Path>() {
-        public boolean accept(Path file) throws IOException {
+        @Override
+        public boolean accept(final Path file) throws IOException {
           return (file.getFileName().toString().endsWith("_SNPs.dat"));
         }
       };
@@ -240,7 +208,8 @@ final class RiskModelBuilder {
    */
   private static final DirectoryStream.Filter<Path> filterannInc =
       new DirectoryStream.Filter<Path>() {
-        public boolean accept(Path file) throws IOException {
+        @Override
+        public boolean accept(final Path file) throws IOException {
           return (file.getFileName().toString().endsWith("_annInc.dat"));
         }
       };
@@ -249,31 +218,32 @@ final class RiskModelBuilder {
    * Parses model SNPs and annual incidence files and returns a {@link HashMap} linking
    * {@code String} model ID keys to {@code RiskModelRawData} values that can be used to build a
    * {@link RiskModel} object.
-   * 
+   *
    * @param targetModelID {@code String} Specific modelID to build, or left blank to build all
    *        models present in the source directory
    * @param sourceDirectory {@code String} path to directory containing all properly formatted SNP
    *        and Annual Incidence files, or the files belonging to the specified targetModelID
    */
-  private static final HashMap<String, RiskModelRawData> parseInputFiles(
-      final String targetModelID, final String sourceDirectory) throws IOException {
+  private static final HashMap<String, RiskModelRawData> parseInputFiles(final String targetModelID,
+      final String sourceDirectory) throws IOException {
     // Try to run the application.
-    HashMap<String, RiskModelRawData> modelRawDataMap = new HashMap<String, RiskModelRawData>();
+    final HashMap<String, RiskModelRawData> modelRawDataMap =
+        new HashMap<String, RiskModelRawData>();
     // Parse model SNPs file(s).
 
     // Start by attempting to read all SNPs.dat files in the source directory
     LOGGER.debug("Now attempting to load SNPs.dat files from directory: " + sourceDirectory);
-    Path sourceDirPath = Paths.get(sourceDirectory);
+    final Path sourceDirPath = Paths.get(sourceDirectory);
     LOGGER.debug("Path resolves to: " + sourceDirPath.toString());
-    try (DirectoryStream<Path> sourceFolder =
-        Files.newDirectoryStream(sourceDirPath, filterSNPs)) {
+    try (DirectoryStream<Path> sourceFolder = Files.newDirectoryStream(sourceDirPath, filterSNPs)) {
       LOGGER.debug("Directory stream for SNPs.dat files open..");
-      
+
       // For each file in the directory, compare to the targetModelID. If it matches, process it
-      for (Path snpFile : sourceFolder) {
+      for (final Path snpFile : sourceFolder) {
         if (snpFile.endsWith(targetModelID + "_SNPs.dat") || targetModelID.isEmpty()) {
           LOGGER.debug("Now attempting to read SNPs file: " + snpFile.toString());
-          try (BufferedReader fileReader = Files.newBufferedReader(snpFile, StandardCharsets.UTF_8)) {
+          try (BufferedReader fileReader =
+              Files.newBufferedReader(snpFile, StandardCharsets.UTF_8)) {
             String line;
             int linesRead = 0;
             // Read lines from file...
@@ -284,12 +254,11 @@ final class RiskModelBuilder {
                 // Parse tab-delimited tokens from the current line.
                 if (linesRead == 0) {
                   // If first line, check that file column headers are correct.
-                  List<String> expColHeaderList =
-                      Arrays.asList("modelID", "rsID", "sourcePub", "allele1", "allele2",
-                          "orientRs", "allele2Freq", "allele2lnHR");
-                  for (String expColHeader : expColHeaderList) {
+                  final List<String> expColHeaderList = Arrays.asList("modelID", "rsID",
+                      "sourcePub", "allele1", "allele2", "orientRs", "allele2Freq", "allele2lnHR");
+                  for (final String expColHeader : expColHeaderList) {
                     if (!expColHeader.equals(lineScanner.next())) {
-                      throw new IOException("Model SNPs file column headers " + "are incorrect.");
+                      throw new IOException("Model SNPs file column headers are incorrect.");
                     }
                   }
                 } else {
@@ -312,15 +281,16 @@ final class RiskModelBuilder {
                     modelRawDataMap.put(modelID, new RiskModelRawData(modelID));
                   }
                   // Add SNP to RiskModelRawData object for modelID.
-                  modelRawDataMap.get(modelID).addSNP(
-                      new SNP(rsID, sourcePub, allele1, allele2,
-                          orientRsStr.matches("FORWARD") ? SNP.AlleleOrientation.FORWARD
-                              : SNP.AlleleOrientation.REVERSE, allele2Freq, allele2lnHR));
+                  modelRawDataMap.get(modelID)
+                      .addSNP(new SNP(rsID, sourcePub,
+                          allele1, allele2, orientRsStr.matches("FORWARD")
+                              ? SNP.AlleleOrientation.FORWARD : SNP.AlleleOrientation.REVERSE,
+                          allele2Freq, allele2lnHR));
                 }
                 // Check that there are no input tokens other than the ones expected.
                 if (lineScanner.hasNext()) {
-                  throw new IOException("Input tokens available past expected "
-                      + "end of line in model SNPs file.");
+                  throw new IOException(
+                      "Input tokens available past expected end of line in model SNPs file.");
                 }
               } // Scanner automatically closed here.
               // Increment number of model SNPs file lines read.
@@ -329,20 +299,20 @@ final class RiskModelBuilder {
           }
         } // Model SNPs file BufferedReader automatically closed here.
       }
-    } catch (Exception e){
+    } catch (final Exception e) {
       LOGGER.error("Exception thrown. Details:", e);
     }
 
     // Parse annual Incidence file(s).
     // Start by attempting to read all annInc.dat files in the source directory
     LOGGER.debug("Now attempting to load annInc.dat files...");
-    
-    
+
+
     // Start by attempting to read all SNPs.dat files in the source directory
     try (DirectoryStream<Path> sourceFolder =
         Files.newDirectoryStream(sourceDirPath, filterannInc)) {
       // For each file in the directory, compare to the targetModelID. If it matches, process it
-      for (Path annIncFile : sourceFolder) {
+      for (final Path annIncFile : sourceFolder) {
         if (annIncFile.endsWith(targetModelID + "_annInc.dat") || targetModelID.isEmpty()) {
           LOGGER.debug("Now attempting to read annInc file: " + annIncFile.toString());
           try (BufferedReader fileReader =
@@ -357,18 +327,18 @@ final class RiskModelBuilder {
                 // Parse tab-delimited tokens from the current line.
                 if (linesRead == 0) {
                   // If first line, check that column headers are correct.
-                  List<String> expColHeaderList = Arrays.asList("modelID", "ageYrs", "annInc");
-                  for (String expColHeader : expColHeaderList) {
+                  final List<String> expColHeaderList =
+                      Arrays.asList("modelID", "ageYrs", "annInc");
+                  for (final String expColHeader : expColHeaderList) {
                     if (!expColHeader.equals(lineScanner.next())) {
-                      throw new IOException("Annual incidence file column headers "
-                          + "are incorrect.");
+                      throw new IOException("Annual incidence file column headers are incorrect.");
                     }
                   }
                 } else {
                   // Otherwise, read annual incidence data.
                   final String modelID = lineScanner.next();
-                  int ageYrs = lineScanner.nextInt();
-                  double annInc = lineScanner.nextDouble();
+                  final int ageYrs = lineScanner.nextInt();
+                  final double annInc = lineScanner.nextDouble();
 
                   /*
                    * If the model ID for the current line corresponds to a model for which we have
@@ -403,7 +373,7 @@ final class RiskModelBuilder {
   /**
    * Constructs a {@link RiskModel} object for each model with a {@code RiskModelRawData} entry in
    * the input {@link HashMap} and saves serialized version (*.rmo file) to the specified path.
-   * 
+   *
    * @param savePath {@code String} path in which to save *.rmo files
    * @param modelRawDataMap {@code HashMap<String,
    *          RiskModelRawData>} with each entry containing a {@code String} model ID key and a
@@ -412,7 +382,7 @@ final class RiskModelBuilder {
   private static final void buildRiskModels(final String savePath,
       final HashMap<String, RiskModelRawData> modelRawDataMap) throws IOException {
     // For each modelRawDataMap entry...
-    for (Map.Entry<String, RiskModelRawData> modelRawDataEntry : modelRawDataMap.entrySet()) {
+    for (final Map.Entry<String, RiskModelRawData> modelRawDataEntry : modelRawDataMap.entrySet()) {
       final String modelID = modelRawDataEntry.getKey();
       final RiskModelRawData modelRawData = modelRawDataEntry.getValue();
       // Convert ageYrs int array to double array.
@@ -422,9 +392,8 @@ final class RiskModelBuilder {
         ageYrsArr[ageIdx] = ageYrsIntArr[ageIdx];
       }
       // Construct RiskModel object for current modelID.
-      final RiskModel modelRiskModel =
-          new RiskModel(modelRawData.getModelName(), modelRawData.getModelSNPs(), ageYrsArr,
-              modelRawData.getMargSurv());
+      final RiskModel modelRiskModel = new RiskModel(modelRawData.getModelName(),
+          modelRawData.getModelSNPs(), ageYrsArr, modelRawData.getMargSurv());
       // Create path to [modelID].rmo file to store serialized RiskModel object.
       final Path modelOutputPath = Paths.get(savePath).resolve(modelID + ".rmo");
       // Try to open an ObjectOutputStream that writes to this file.
@@ -438,13 +407,10 @@ final class RiskModelBuilder {
 
   /**
    * Main method of {@code RiskModelBuilder} class.
-   * 
-   * @param args {@code String[]} providing required command line arguments. {@code args[0]} should
-   *        contain the path to the model SNPs input file, {@code args[1]} should contain the path
-   *        to the annual incidence input file, and {@code args[2]} should contain the path to the
-   *        directory where the serialized {@code RiskModel} objects (*.rmo files) should be saved.
+   *
+   * @param args {@code String[]} providing required command line arguments
    */
-  public static void main(String[] args) {
+  public static void main(final String[] args) {
     // Set exit code to 0 (success).
     int exitCode = 0;
 
@@ -458,96 +424,98 @@ final class RiskModelBuilder {
     LOGGER.debug("Now attempting to build options.");
 
     // Define command line options.
-    final Option help = new Option("h", "help", false, "Print this usage information.");
-    final Option build =
-        new Option("b", "buildModel", false,
-            "Generate new risk predictions model using the supplied annual incidences "
-                + "and risk allele hazard ratios in given by <modelID>_annInc.dat / "
-                + "<modelID>_SNPs.dat and save the resulting model as a risk model object"
-                + "(<modelID>.rmo).");
-    
-    final Option optModelID = new Option("m", "modelID", true, "Set the modelID that the "
-        + "builder will attempt to build. If left blank, the builder will attempt to build"
-        + "all models in the source directory (<SourceDir>).");
+    final Option help = new Option("h", "help", false, "Print this usage information and exit.");
+
+    final Option optModelID = new Option("m", "model_id", true,
+        "The builder will build a risk model using the supplied annual incidences "
+            + "and risk allele hazard ratios in given by <modelID>_annInc.dat / "
+            + "<modelID>_SNPs.dat and save the resulting model as a risk model object "
+            + "<modelID>.rmo. If left blank, the builder will attempt to build models "
+            + "for all source files in the source directory <sourceDir> and parse "
+            + "the modelIDs from these file names.");
     optModelID.setArgName("modelID");
 
-    final Option sources =
-        new Option("s", "SourceDirectory", true, "Set the directory in "
-            + "which the builder will look for model source files (<SourceDir>). If "
-            + "left unset, the builder will look in the directory containing itself.");
+    final Option sources = new Option("s", "src_dir", true,
+        "The directory in which the builder will look for model source files. If "
+            + "left unset, the builder will look in the current working directory.");
     sources.setArgName("sourceDir");
 
-    final Option destination =
-        new Option("d", "DestinationDirectory", true, "Set the"
-            + " directory in which the output model will be saved. If left "
-            + "unset, the builder will save the model in the directory " + "containing itself.");
-    destination.setArgName("saveDir");
+    final Option destination = new Option("o", "out_dir", true,
+        "The directory in which the risk model object files will be saved. If left "
+            + "unset, the builder will save the risk model object files in the current "
+            + "working directory.");
+    destination.setArgName("outputDir");
 
-
-    /*
-     * Make options a mutually exclusive group so only one can be selected at a time. Make the group
-     * required so that at least one of these options must be selected.
-     */
-    final OptionGroup modes = new OptionGroup();
-    modes.addOption(help);
-    modes.addOption(build);
-    modes.setRequired(true);
     // Set command-line options.
     final Options options = new Options();
-    options.addOptionGroup(modes);
+    options.addOption(help);
     options.addOption(optModelID);
     options.addOption(sources);
     options.addOption(destination);
 
     LOGGER.debug("Building of options complete. Now attempting to parse them.");
     try {
+      // Print masthead to standard output.
+      Util.printMasthead(RiskModelBuilder.class.getSimpleName(), stdOutPw);
       // Parse command line and echo arguments to standard output.
       final CommandLine cmd = new PosixParser().parse(options, args);
-      printArgs(cmd, stdOutPw);
+      Util.printArgs(cmd, stdOutPw);
 
-      switch (modes.getSelected()) {
-        case "h":
-          // If in "h" mode, print usage message to standard output.
-          printHelp(options, stdOutPw);
-          break;
-        case "b":
-          LOGGER.debug("Build mode selected");
-          /*
-           * If in "b" mode, build specified risk models, and produce output files containing the
-           * saved models to the specified directory
-           */
-          String modelID = cmd.getOptionValue("modelID", "");
-          String sourceDir = cmd.getOptionValue("sourceDir", "");
-          String outputDir = cmd.getOptionValue("destinationDir", "");
-          LOGGER.debug("Confirming, read modelID: " + modelID);
-          LOGGER.debug("Confirming, read sourceDir: " + sourceDir);
-          LOGGER.debug("Confirming, read outputDir: " + outputDir);
-          
-          // Try parsing input files and building RiskModel objects.
+      if (cmd.hasOption("h")) {
+        // If in "h" mode, print usage message to standard output.
+        Util.printHelp(options, RiskModelBuilder.class.getSimpleName(), stdOutPw);
+      } else {
+        LOGGER.debug("Build mode selected");
+        /*
+         * Build specified risk models, and produce output files containing the saved models to the
+         * specified directory
+         */
+        final String modelID = cmd.getOptionValue("model_id", "");
+        final String sourceDir = cmd.getOptionValue("src_dir", System.getProperty("user.dir"));
+        final String outputDir = cmd.getOptionValue("out_dir", System.getProperty("user.dir"));
+        LOGGER.debug("Confirming, read modelID: " + modelID);
+        LOGGER.debug("Confirming, read sourceDir: " + sourceDir);
+        LOGGER.debug("Confirming, read outputDir: " + outputDir);
 
-          LOGGER.debug("Beginning attempt to parse input files..");
-          HashMap<String, RiskModelRawData> modelRawDataMap = parseInputFiles(modelID, sourceDir);
-          
-          LOGGER.debug("Parsing complete. Beginning attempt to build risk models...");
-          LOGGER.debug(modelRawDataMap.toString());
-          buildRiskModels(outputDir, modelRawDataMap);
+        // Try parsing input files and building RiskModel objects.
 
-          break;
+        LOGGER.debug("Beginning attempt to parse input files..");
+        final HashMap<String, RiskModelRawData> modelRawDataMap =
+            parseInputFiles(modelID, sourceDir);
+
+        LOGGER.debug("Parsing complete. Beginning attempt to build risk models...");
+        LOGGER.debug(modelRawDataMap.toString());
+        buildRiskModels(outputDir, modelRawDataMap);
       }
-
-
-
-    } catch (Exception e) {
+    } catch (final ParseException e) {
+      LOGGER.error("Parse exception!");
       /*
-       * If any exception is thrown during the process, a message will be printed to standard output
-       * and details provided. The exit code will be set to 1 (failure) to alert the build system to
-       * the failure.
+       * If a ParseException is thrown to indicate a problem with the command line, print the
+       * ParseException message and the usage message and set the exit code to 1 (failure).
        */
-      System.out.println("Problem building or writing risk model object " + "files.");
+      stdOutPw.println();
+      stdOutPw.println(WordUtils.wrap(e.getMessage(), 80));
+      stdOutPw.println();
+      Util.printHelp(options, RiskModelBuilder.class.getSimpleName(), stdOutPw);
+      exitCode = 1;
+    } catch (final NoSuchFileException e) {
+      stdOutPw.println("ERROR! File not found!");
+      stdOutPw.println(
+          "The following file could not be found. Please check your command and try again.");
+      stdOutPw.println(WordUtils.wrap(e.getMessage(), 80));
+      exitCode = 1;
+    } catch (final Exception e) {
+      /*
+       * If any other exception is thrown during the process, a message will be printed to standard
+       * output and details provided. The exit code will be set to 1 (failure).
+       */
       LOGGER.error("Exception thrown. Details:", e);
       System.out.println(e.toString());
       exitCode = 1;
     }
+    // Flush and close the standard output PrintWriter.
+    stdOutPw.flush();
+    stdOutPw.close();
     // Exit with the appropriate exit code.
     System.exit(exitCode);
   }

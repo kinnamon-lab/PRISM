@@ -23,7 +23,7 @@ the License.
   <!-- Project artifact information. -->
   <groupId>edu.osumc</groupId>
   <artifactId>prism</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
+  <version>1.0.0</version>
   <prerequisites>
     <maven>3.0</maven>
   </prerequisites>
@@ -229,7 +229,7 @@ the License.
   <scm>
     <connection>scm:git:git://github.com/kinnamon-lab/PRISM.git</connection>
     <developerConnection>scm:git:[fetch=]git://github.com/kinnamon-lab/PRISM.git[push=]ssh://git@github.com/kinnamon-lab/PRISM.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>v1.0.0</tag>
   </scm>
 
   <!-- Profiles to override standard settings. -->

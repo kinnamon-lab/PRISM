@@ -176,7 +176,7 @@ the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-scm-plugin</artifactId>
-        <version>1.9.5</version>
+        <version>1.9.2</version>
       </plugin>
     </plugins>
   </build>

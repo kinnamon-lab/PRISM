@@ -1,0 +1,14 @@
+language: java
+script:
+- mvn test -B -Ptest
+- mvn package -B
+deploy:
+  provider: releases
+  api_key:
+    secure: lmZfAnFAkeI0+s4AYWgcAgDC3gKr3V/K6OSiD/tsgSgTzy8ji5Rk/pbOl1ekne1c1gDIzpsbwZGHW6oAqH9YZYSukY9OIjYtVBi1GdICs2+2/qOlY/WmKa4vu/P+L0kOW69zHDkOhWThtBJosJYWP0VpfVn6ivHxoF2NztI6ZTSCSbmPdtcuiaJGKfGZ3oU/rEuoIfLT1ivrZqil889SiRCeszY25pnOntVhH8YkLNkdZgoCe3D34ohPn/GB70dUvx7qtuNan59b3c9rNp6iDVP0GAH/aDCyIiUQwYUUlwE/SJ+UUF+vyImvum/IC2o7JduHcIiGys0xTrBUJ48163EhVeFc79bUX3qwhvgcDsIoIpBBHmDeoh3S2+9QSpNkSl7X/KW14ehmes813/4Fu/EG3d30VS3jTz8WLLyrEO23pDXTYzz1ijuagCiAd5FTvGG3Dn9APrmfC+76rX5S64vDY7+qYzE3GLNesNIy4mhB/L0JSbpLYmDQi4I5g5q9moxjm7pZSBWoY7pLoUf00fdXHwYl3Al6dRfe+TvYyiHMqnbaU6ua8SA+KuUEKRYIysHTpOFzmcZqK69+6cysLuwkTu0UfkPfkWit8GvSwurdL5dH1mon5jMJCubR4A6QLsVRb2aZPV++bhXTivRDFj0xEgWzqeAO75pmEKehL6k=
+  file_glob: true
+  file: target/prism-*.jar
+  skip_cleanup: true
+  on:
+    repo: kinnamon-lab/PRISM
+    tags: true

@@ -3,6 +3,8 @@ Copyright 2014-2017 The Ohio State University Wexner Medical Center\
 **Authors:** Daniel D. Kinnamon, PhD; Carl A. Starkey, PhD\
 Licensed under the Apache License, Version 2.0
 
+![Travis Build Status](https://travis-ci.org/kinnamon-lab/PRISM.svg?branch=master)
+
 ## INTRODUCTION
 
 PRISM is a set of Java classes that can be used to implement polygenic risk score models given a set of SNPs and an annual incidence file for a disease in the same population. In addition to providing classes useful for building such risk models, it provides an executable `RiskModelBuilder` class for fitting new risk model objects and another executable `RiskPredictor` class for generating risk predictions for individuals using these risk model objects. Additional details are provided below.
@@ -19,7 +21,10 @@ If you use the PRISM software in your research, please include the following cit
     Kinnamon DD, Starkey CA. PRISM: Polygenic RIsk Score Modeler [Source code on Internet]. Version X. Columbus (OH): The Ohio State University Wexner Medical Center; DD MMM YYYY version release date [cited DD MMM YYYY download date]. Available from: https://github.com/kinnamon-lab/PRISM.
 
 ## INSTALLATION
-Coming soon.
+
+The easiest way to install PRISM is to download the release JAR `prism-X.X.X.jar` from the project's GitHub [releases](https://github.com/kinnamon-lab/PRISM/releases) page. This JAR is entirely self-contained and can be run immediately from the command line. Those interested in development may also want to download the `prism-X.X.X.jar` to view the sources in an IDE.
+
+PRISM can also be built from source using Maven 3.X. The default profile runs the `package` goal to build the JARs above and skips unit tests. You can use `mvn install` to put the JARs in your local Maven repository.
 
 ## RUNNING `RiskModelBuilder`
 
@@ -60,7 +65,7 @@ modelID | String | The model identifier used in the file name
 ageYrs | Integer | Age in years
 annInc | Double | The annual incidence between ages ageYrs - 1 and ageYrs. This must be 0 for ageYrs = 0
 
-The names of these columns should appear in a single header row followed by one row for each consecutive year between 0 and the last age for which predictors are desired, inclusive
+The names of these columns should appear in a single header row followed by one row for each consecutive year between 0 and the last age for which predictors are desired, inclusive.
 
 ## RUNNING `RiskPredictor`
 
@@ -117,6 +122,10 @@ PredCumRiskAge## (multiple) | Double | Predicted cumulative risk (1 - survivor f
 
 ## METHODOLOGICAL DETAILS
 Coming soon.
+
+## CONTRIBUTING
+
+We welcome all contributions that could make this software better or more useful to the community. You can submit bug reports by creating an issue or submit a pull request to develop new functionality. Individuals who develop significant new functionality will receive credit as project authors.
 
 ## ACKNOWLEDGEMENTS
 

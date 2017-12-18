@@ -1,7 +1,5 @@
 language: java
-script:
-- mvn test -B -Ptest
-- mvn package -B
+script: travis_wait 60 mvn test -B -Ptest
 deploy:
   provider: releases
   api_key:

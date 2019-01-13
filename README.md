@@ -49,7 +49,7 @@ allele1 | String | Allele 1 in the source. See below for additional information
 allele2 | String | Allele 2 in the source. See below for additional information
 orientRs | String | Orientation of the alleles in the source relative to refSNP alleles. See below for additional information
 allele2Freq | Double | *Allele 2* frequency from source publication or a public database
-allele2LnHR | Double | Cox proportional hazards model natural log hazard ratio *for each additional allele 2* obtained from the source
+allele2lnHR | Double | Cox proportional hazards model natural log hazard ratio *for each additional allele 2* obtained from the source
 
 The names of these columns should appear in a single header row followed by one row for each SNP for a particular model.
 
